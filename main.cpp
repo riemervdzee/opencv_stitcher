@@ -85,13 +85,11 @@ int main(int argc, char* argv[])
 	vector<Size> full_img_sizes(num_images);
 	double seam_work_aspect = 1;
 
-	for (int i = 0; i < num_images; ++i)
-	{
+	for (int i = 0; i < num_images; ++i) {
 		full_img = imread(img_names[i]);
 		full_img_sizes[i] = full_img.size();
 
-		if (full_img.empty())
-		{
+		if (full_img.empty()) {
 			cerr << "Can't open image " << img_names[i] << endl;
 			return -1;
 		}
@@ -117,7 +115,7 @@ int main(int argc, char* argv[])
 
 	matcher(features, pairwise_matches,matchMask);
 	matcher.collectGarbage();
-	
+
 	cout << "Time: " << ((getTickCount() - t) / getTickFrequency()) << " sec,\t Pairwise matching" << endl;
 	t = getTickCount();
 
@@ -128,8 +126,7 @@ int main(int argc, char* argv[])
 	vector<Mat> img_subset;
 	vector<string> img_names_subset;
 	vector<Size> full_img_sizes_subset;
-	for (size_t i = 0; i < indices.size(); ++i)
-	{
+	for (size_t i = 0; i < indices.size(); ++i) {
 		img_names_subset.push_back(img_names[indices[i]]);
 		img_subset.push_back(images[indices[i]]);
 		full_img_sizes_subset.push_back(full_img_sizes[indices[i]]);
@@ -141,8 +138,7 @@ int main(int argc, char* argv[])
 
 	// Check if we still have enough images
 	num_images = static_cast<int>(img_names.size());
-	if (num_images < 2)
-	{
+	if (num_images < 2) {
 		cerr << "Error: Need more images" << endl;
 		return -1;
 	}
@@ -158,14 +154,13 @@ int main(int argc, char* argv[])
 	cout << "Time: " << ((getTickCount() - t) / getTickFrequency()) << " sec,\t Estimator" << endl;
 	t = getTickCount();
 
-	for (size_t i = 0; i < cameras.size(); ++i)
-	{
+	for (size_t i = 0; i < cameras.size(); ++i) {
 		Mat R;
 		cameras[i].R.convertTo(R, CV_32F);
 		cameras[i].R = R;
 		//cout << "Initial intrinsics #" << (indices[i]+1) << ":\n" << cameras[i].K() << endl;
 	}
-	
+
 	cout << "Time: " << ((getTickCount() - t) / getTickFrequency()) << " sec,\t Camera intrinsics" << endl;
 	t = getTickCount();
 
@@ -178,15 +173,14 @@ int main(int argc, char* argv[])
 	if (ba_refine_mask[4] == 'x') refine_mask(1,2) = 1;
 	adjuster.setRefinementMask(refine_mask);
 	adjuster(features, pairwise_matches, cameras);
-	
+
 	cout << "Time: " << ((getTickCount() - t) / getTickFrequency()) << " sec,\t Adjustor" << endl;
 	t = getTickCount();
 
 	// Find median focal length
 
 	vector<double> focals;
-	for (size_t i = 0; i < cameras.size(); ++i)
-	{
+	for (size_t i = 0; i < cameras.size(); ++i) {
 		//cout << "Camera #" << indices[i]+1 << ":\n" << cameras[i].K() << endl;
 		focals.push_back(cameras[i].focal);
 	}
@@ -197,7 +191,7 @@ int main(int argc, char* argv[])
 		warped_image_scale = static_cast<float>(focals[focals.size() / 2]);
 	else
 		warped_image_scale = static_cast<float>(focals[focals.size() / 2 - 1] + focals[focals.size() / 2]) * 0.5f;
-	
+
 	cout << "Time: " << ((getTickCount() - t) / getTickFrequency()) << " sec,\t warping and etc" << endl;
 	t = getTickCount();
 
@@ -208,8 +202,7 @@ int main(int argc, char* argv[])
 	vector<Mat> masks(num_images);
 
 	// Prepapre images masks
-	for (int i = 0; i < num_images; ++i)
-	{
+	for (int i = 0; i < num_images; ++i) {
 		masks[i].create(images[i].size(), CV_8U);
 		masks[i].setTo(Scalar::all(255));
 	}
@@ -220,8 +213,7 @@ int main(int argc, char* argv[])
 
 	Ptr<RotationWarper> warper = warper_creator->create(static_cast<float>(warped_image_scale * seam_work_aspect));
 
-	for (int i = 0; i < num_images; ++i)
-	{
+	for (int i = 0; i < num_images; ++i) {
 		Mat_<float> K;
 		cameras[i].K().convertTo(K, CV_32F);
 		float swa = (float)seam_work_aspect;
@@ -246,7 +238,7 @@ int main(int argc, char* argv[])
 
 	// Find seam
 	seam_finder.find(images_warped_f, corners, masks_warped);
-	
+
 	cout << "Time: " << ((getTickCount() - t) / getTickFrequency()) << " sec,\t Seam finder" << endl;
 	t = getTickCount();
 
@@ -269,8 +261,7 @@ int main(int argc, char* argv[])
 	warper = warper_creator->create(warped_image_scale);
 
 	// Update corners and sizes
-	for (int i = 0; i < num_images; ++i)
-	{
+	for (int i = 0; i < num_images; ++i) {
 		// Update intrinsics
 		cameras[i].focal *= compose_work_aspect;
 		cameras[i].ppx *= compose_work_aspect;
@@ -296,8 +287,7 @@ int main(int argc, char* argv[])
 
 	Mat img;
 
-	for (int i = 0; i < num_images; ++i)
-	{
+	for (int i = 0; i < num_images; ++i) {
 		// Read image
 		img = imread(img_names[i]);
 
@@ -336,8 +326,8 @@ int main(int argc, char* argv[])
 	cout << "Time: " << ((getTickCount() - t) / getTickFrequency()) << " sec,\t Compositing" << endl;
 
 	imwrite(result_name, result);
-	
+
 	cout << "Finished! total time: " << ((getTickCount() - app_start_time) / getTickFrequency()) << " sec" << endl;
-	
+
 	return 0;
 }
