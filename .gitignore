@@ -1,0 +1,16 @@
+# Compiled files
+*.slo
+*.lo
+*.o
+*.obj
+*.out
+*.so
+*.a
+*.lib
+
+# Ignore dotfiles
+.*
+opencv_test
+
+# But a few exceptions..
+!.gitignore
