@@ -10,7 +10,10 @@
 
 # Ignore dotfiles
 .*
+
+# Add more ignores
 opencv_test
+result.jpg
 
 # But a few exceptions..
 !.gitignore
