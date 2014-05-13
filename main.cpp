@@ -27,7 +27,7 @@ using namespace cv::detail;
 vector<string> img_names = {
 	"dataset1/img01.jpg",
 	"dataset1/img02.jpg",
-	"dataset1/img03.jpg",
+/*	"dataset1/img03.jpg",
 	"dataset1/img04.jpg",
 	"dataset1/img05.jpg",
 	"dataset1/img06.jpg",
@@ -36,7 +36,7 @@ vector<string> img_names = {
 	"dataset1/img09.jpg",
 	"dataset1/img10.jpg",
 	"dataset1/img11.jpg",
-	"dataset1/img12.jpg"
+	"dataset1/img12.jpg"*/
 };
 string result_name = "result.jpg";
 int num_images = img_names.size();
@@ -161,9 +161,6 @@ int main(int argc, char* argv[])
 		//cout << "Initial intrinsics #" << (indices[i]+1) << ":\n" << cameras[i].K() << endl;
 	}
 
-	cout << "Time: " << ((getTickCount() - t) / getTickFrequency()) << " sec,\t Camera intrinsics" << endl;
-	t = getTickCount();
-
 	adjuster.setConfThresh(conf_adjustor);
 	Mat_<uchar> refine_mask = Mat::zeros(3, 3, CV_8U);
 	if (ba_refine_mask[0] == 'x') refine_mask(0,0) = 1;
@@ -172,13 +169,12 @@ int main(int argc, char* argv[])
 	if (ba_refine_mask[3] == 'x') refine_mask(1,1) = 1;
 	if (ba_refine_mask[4] == 'x') refine_mask(1,2) = 1;
 	adjuster.setRefinementMask(refine_mask);
-	adjuster(features, pairwise_matches, cameras);
+	//adjuster(features, pairwise_matches, cameras);
 
 	cout << "Time: " << ((getTickCount() - t) / getTickFrequency()) << " sec,\t Adjustor" << endl;
 	t = getTickCount();
 
 	// Find median focal length
-
 	vector<double> focals;
 	for (size_t i = 0; i < cameras.size(); ++i) {
 		//cout << "Camera #" << indices[i]+1 << ":\n" << cameras[i].K() << endl;
@@ -191,9 +187,6 @@ int main(int argc, char* argv[])
 		warped_image_scale = static_cast<float>(focals[focals.size() / 2]);
 	else
 		warped_image_scale = static_cast<float>(focals[focals.size() / 2 - 1] + focals[focals.size() / 2]) * 0.5f;
-
-	cout << "Time: " << ((getTickCount() - t) / getTickFrequency()) << " sec,\t warping and etc" << endl;
-	t = getTickCount();
 
 	vector<Point> corners(num_images);
 	vector<Mat> masks_warped(num_images);
