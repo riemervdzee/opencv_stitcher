@@ -25,28 +25,27 @@ using namespace cv::detail;
 
 // Files
 vector<string> img_names = {
-	"dataset1/img01.jpg",
-	"dataset1/img02.jpg",
-/*	"dataset1/img03.jpg",
-	"dataset1/img04.jpg",
-	"dataset1/img05.jpg",
-	"dataset1/img06.jpg",
-	"dataset1/img07.jpg",
-	"dataset1/img08.jpg",
-	"dataset1/img09.jpg",
-	"dataset1/img10.jpg",
-	"dataset1/img11.jpg",
-	"dataset1/img12.jpg"*/
+	"dataset2/img01.jpg",
+	"dataset2/img02.jpg",
+	"dataset2/img03.jpg",
+	"dataset2/img04.jpg",
+	"dataset2/img05.jpg",
+	"dataset2/img06.jpg",
+	"dataset2/img07.jpg",
+	"dataset2/img08.jpg",
+	"dataset2/img09.jpg",
+	"dataset2/img10.jpg",
+	"dataset2/img11.jpg",
+	"dataset2/img12.jpg"
 };
-string result_name = "result.jpg";
-int num_images = img_names.size();
+string result_name = "result";
 
-// Size of the images themselves
-float img_size = (400 * 400);
+// Size of the input images
+Size img_size(1920, 1080);
 
 // We resize the working copies to smaller sizes
-float feat_size = 0.1 * 1e6;
-float feat_factor = sqrt( feat_size / img_size);
+float feat_size = 0.2 * 1e6;
+float feat_factor = sqrt( feat_size / static_cast<float>(img_size.area()));
 
 // Options: SurfFeaturesFinder or OrbFeaturesFinder
 OrbFeaturesFinder featureFinder;
@@ -62,10 +61,14 @@ string ba_refine_mask = "xxxxx";
 // Exposure type
 int expos_comp_type = ExposureCompensator::GAIN_BLOCKS;
 
-// SeamFinder, options: NoSeamFinder, VoronoiSeamFinder, GraphCutSeamFinder(GraphCutSeamFinderBase::COST_COLOR), GraphCutSeamFinder
-//		(GraphCutSeamFinderBase::COST_COLOR_GRAD), DpSeamFinder(DpSeamFinder::COLOR), DpSeamFinder(DpSeamFinder::COLOR_GRAD)
+// Seamfinder algorithm. Options:
+//		NoSeamFinder, VoronoiSeamFinder, GraphCutSeamFinder(GraphCutSeamFinderBase::COST_COLOR),
+//		GraphCutSeamFinder, (GraphCutSeamFinderBase::COST_COLOR_GRAD), DpSeamFinder(DpSeamFinder::COLOR),
+//		DpSeamFinder(DpSeamFinder::COLOR_GRAD)
 GraphCutSeamFinder seam_finder(GraphCutSeamFinderBase::COST_COLOR);
 
+// Options:
+//		Blender::NO, Blender::FEATHER, Blender::MULTI_BAND
 int blend_type = Blender::MULTI_BAND;
 float blend_strength = 5;
 
@@ -79,13 +82,24 @@ int main(int argc, char* argv[])
 	cout << "Finding features:" << endl;
 	int64 t = getTickCount();
 
-	Mat full_img;
-	vector<ImageFeatures> features(num_images);
-	vector<Mat> images(num_images);
-	vector<Size> full_img_sizes(num_images);
-	double seam_work_aspect = 1;
+	Mat full_img, full_img2;
+	vector<ImageFeatures> features(img_names.size());
+	vector<Mat> images(img_names.size());
+	vector<Size> full_img_sizes(img_names.size());
 
-	for (int i = 0; i < num_images; ++i) {
+	// Our camera object
+	Mat intrinsic = getDefaultNewCameraMatrix( Mat::eye( 3, 3, CV_64F), img_size, true);
+
+	// Distruption coeffecients
+	Mat distCoeffs = Mat::zeros( 1, 4, CV_32F);
+	distCoeffs.at<float>(0) = -0.00000019;
+	//distCoeffs.at<double>(1) = -0.00000000000001;
+
+	// Distortion maps
+	Mat map1, map2;
+	initUndistortRectifyMap( intrinsic, distCoeffs, Mat(), Mat(), img_size, CV_32FC1, map1, map2);
+
+	for (unsigned int i = 0; i < img_names.size(); ++i) {
 		full_img = imread(img_names[i]);
 		full_img_sizes[i] = full_img.size();
 
@@ -94,15 +108,23 @@ int main(int argc, char* argv[])
 			return -1;
 		}
 
-		resize(full_img, images[i], Size(), feat_factor, feat_factor);
+		remap(full_img, full_img2, map1, map2, INTER_LINEAR );
+
+		resize(full_img2, images[i], Size(), feat_factor, feat_factor);
 
 		featureFinder(images[i], features[i]);
 		features[i].img_idx = i;
 		cout << "\tImage #" << (i+1) << ": " << features[i].keypoints.size() << endl;
+
+#if 0
+		string file = result_name + std::to_string( i ) + ".jpg";
+		imwrite(file, full_img2);
+#endif
 	}
 
 	featureFinder.collectGarbage();
 	full_img.release();
+	full_img2.release();
 
 	cout << "Time: " << ((getTickCount() - t) / getTickFrequency()) << " sec,\t finding features" << endl;
 	t = getTickCount();
@@ -110,7 +132,7 @@ int main(int argc, char* argv[])
 	vector<MatchesInfo> pairwise_matches;
 	BestOf2NearestMatcher matcher(false, conf_featurematching);
 	Mat matchMask(features.size(),features.size(),CV_8U,Scalar(0));
-	for (int i = 0; i < num_images -1; ++i)
+	for (unsigned int i = 0; i < img_names.size() -1; ++i)
 		matchMask.at<char>(i,i+1) =1;
 
 	matcher(features, pairwise_matches,matchMask);
@@ -137,8 +159,8 @@ int main(int argc, char* argv[])
 	full_img_sizes = full_img_sizes_subset;
 
 	// Check if we still have enough images
-	num_images = static_cast<int>(img_names.size());
-	if (num_images < 2) {
+	img_names.size() = static_cast<int>(img_names.size());
+	if (img_names.size() < 2) {
 		cerr << "Error: Need more images" << endl;
 		return -1;
 	}
@@ -169,7 +191,7 @@ int main(int argc, char* argv[])
 	if (ba_refine_mask[3] == 'x') refine_mask(1,1) = 1;
 	if (ba_refine_mask[4] == 'x') refine_mask(1,2) = 1;
 	adjuster.setRefinementMask(refine_mask);
-	//adjuster(features, pairwise_matches, cameras);
+	adjuster(features, pairwise_matches, cameras);
 
 	cout << "Time: " << ((getTickCount() - t) / getTickFrequency()) << " sec,\t Adjustor" << endl;
 	t = getTickCount();
@@ -188,14 +210,14 @@ int main(int argc, char* argv[])
 	else
 		warped_image_scale = static_cast<float>(focals[focals.size() / 2 - 1] + focals[focals.size() / 2]) * 0.5f;
 
-	vector<Point> corners(num_images);
-	vector<Mat> masks_warped(num_images);
-	vector<Mat> images_warped(num_images);
-	vector<Size> sizes(num_images);
-	vector<Mat> masks(num_images);
+	vector<Point> corners(img_names.size());
+	vector<Mat> masks_warped(img_names.size());
+	vector<Mat> images_warped(img_names.size());
+	vector<Size> sizes(img_names.size());
+	vector<Mat> masks(img_names.size());
 
 	// Prepapre images masks
-	for (int i = 0; i < num_images; ++i) {
+	for (unsigned int i = 0; i < img_names.size(); ++i) {
 		masks[i].create(images[i].size(), CV_8U);
 		masks[i].setTo(Scalar::all(255));
 	}
@@ -204,12 +226,12 @@ int main(int argc, char* argv[])
 	Ptr<WarperCreator> warper_creator;
 	warper_creator = new cv::PlaneWarper();
 
-	Ptr<RotationWarper> warper = warper_creator->create(static_cast<float>(warped_image_scale * seam_work_aspect));
+	Ptr<RotationWarper> warper = warper_creator->create(static_cast<float>(warped_image_scale));
 
-	for (int i = 0; i < num_images; ++i) {
+	for (unsigned int i = 0; i < img_names.size(); ++i) {
 		Mat_<float> K;
 		cameras[i].K().convertTo(K, CV_32F);
-		float swa = (float)seam_work_aspect;
+		float swa = 1.f;
 		K(0,0) *= swa; K(0,2) *= swa;
 		K(1,1) *= swa; K(1,2) *= swa;
 
@@ -219,8 +241,8 @@ int main(int argc, char* argv[])
 		warper->warp(masks[i], K, cameras[i].R, INTER_NEAREST, BORDER_CONSTANT, masks_warped[i]);
 	}
 
-	vector<Mat> images_warped_f(num_images);
-	for (int i = 0; i < num_images; ++i)
+	vector<Mat> images_warped_f(img_names.size());
+	for (unsigned int i = 0; i < img_names.size(); ++i)
 		images_warped[i].convertTo(images_warped_f[i], CV_32F);
 
 	Ptr<ExposureCompensator> compensator = ExposureCompensator::createDefault(expos_comp_type);
@@ -232,21 +254,20 @@ int main(int argc, char* argv[])
 	// Find seam
 	seam_finder.find(images_warped_f, corners, masks_warped);
 
-	cout << "Time: " << ((getTickCount() - t) / getTickFrequency()) << " sec,\t Seam finder" << endl;
-	t = getTickCount();
-
 	// Release unused memory
 	images.clear();
 	images_warped.clear();
 	images_warped_f.clear();
 	masks.clear();
 
+	cout << "Time: " << ((getTickCount() - t) / getTickFrequency()) << " sec,\t Seam finder" << endl;
+	t = getTickCount();
+
 	Mat img_warped, img_warped_s;
 	Mat dilated_mask, seam_mask, mask, mask_warped;
 	Ptr<Blender> blender;
 
 	// Compute relative scales
-	//compose_seam_aspect = compose_scale / seam_scale;
 	float compose_work_aspect = 1 / feat_factor;
 
 	// Update warped image scale
@@ -254,7 +275,7 @@ int main(int argc, char* argv[])
 	warper = warper_creator->create(warped_image_scale);
 
 	// Update corners and sizes
-	for (int i = 0; i < num_images; ++i) {
+	for (unsigned int i = 0; i < img_names.size(); ++i) {
 		// Update intrinsics
 		cameras[i].focal *= compose_work_aspect;
 		cameras[i].ppx *= compose_work_aspect;
@@ -273,24 +294,36 @@ int main(int argc, char* argv[])
 	blender = Blender::createDefault(blend_type, false);
 	Size dst_sz = resultRoi(corners, sizes).size();
 	float blend_width = sqrt(static_cast<float>(dst_sz.area())) * blend_strength / 100.f;
-	MultiBandBlender* mb = dynamic_cast<MultiBandBlender*>(static_cast<Blender*>(blender));
-	mb->setNumBands(static_cast<int>(ceil(log(blend_width)/log(2.)) - 1.));
+	if (blend_width < 1.f)
+        blender = Blender::createDefault(Blender::NO, false);
+    else if (blend_type == Blender::MULTI_BAND)
+    {
+        MultiBandBlender* mb = dynamic_cast<MultiBandBlender*>(static_cast<Blender*>(blender));
+        mb->setNumBands(static_cast<int>(ceil(log(blend_width)/log(2.)) - 1.));
+    }
+    else if (blend_type == Blender::FEATHER)
+    {
+        FeatherBlender* fb = dynamic_cast<FeatherBlender*>(static_cast<Blender*>(blender));
+        fb->setSharpness(1.f/blend_width);
+    }
 
 	blender->prepare(corners, sizes);
 
-	Mat img;
+	Mat img, img2;
 
-	for (int i = 0; i < num_images; ++i) {
+	for (unsigned int i = 0; i < img_names.size(); ++i) {
 		// Read image
 		img = imread(img_names[i]);
 
 		Size img_size = img.size();
 
+		remap(img, img2, map1, map2, INTER_LINEAR );
+
 		Mat K;
 		cameras[i].K().convertTo(K, CV_32F);
 
 		// Warp the current image
-		warper->warp(img, K, cameras[i].R, INTER_LINEAR, BORDER_REFLECT, img_warped);
+		warper->warp(img2, K, cameras[i].R, INTER_LINEAR, BORDER_REFLECT, img_warped);
 
 		// Warp the current image mask
 		mask.create(img_size, CV_8U);
@@ -303,6 +336,7 @@ int main(int argc, char* argv[])
 		img_warped.convertTo(img_warped_s, CV_16S);
 		img_warped.release();
 		img.release();
+		img2.release();
 		mask.release();
 
 		dilate(masks_warped[i], dilated_mask, Mat());
@@ -318,7 +352,8 @@ int main(int argc, char* argv[])
 
 	cout << "Time: " << ((getTickCount() - t) / getTickFrequency()) << " sec,\t Compositing" << endl;
 
-	imwrite(result_name, result);
+	string file = result_name + ".jpg";
+	imwrite(file, result);
 
 	cout << "Finished! total time: " << ((getTickCount() - app_start_time) / getTickFrequency()) << " sec" << endl;
 
