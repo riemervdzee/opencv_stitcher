@@ -13,7 +13,7 @@
 
 # Add more ignores
 opencv_test
-result.jpg
+result*.jpg
 
 # But a few exceptions..
 !.gitignore
