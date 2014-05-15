@@ -12,8 +12,14 @@
 .*
 
 # Add more ignores
-opencv_test
-result*.jpg
+build/opencv_stitcher
+build/result*.jpg
+build/opencv_stitcher.cbp
+build/Makefile
+build/cmake_install.cmake
+build/CMakeCache.txt
+build/algo.cbp
+build/CMakeFiles/*
 
 # But a few exceptions..
 !.gitignore
