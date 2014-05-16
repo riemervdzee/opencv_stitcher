@@ -24,7 +24,7 @@ using namespace cv::detail;
 
 
 // Files
-vector<string> img_names = {
+static vector<string> img_names = {
 	"dataset2/img01.jpg",
 	"dataset2/img02.jpg",
 	"dataset2/img03.jpg",
@@ -36,30 +36,50 @@ vector<string> img_names = {
 	"dataset2/img09.jpg",
 	"dataset2/img10.jpg",
 	"dataset2/img11.jpg",
-	"dataset2/img12.jpg"
+	"dataset2/img12.jpg",
+	"dataset2/img13.jpg",
+	"dataset2/img14.jpg",
+	"dataset2/img15.jpg",
+	"dataset2/img16.jpg",
+	"dataset2/img17.jpg",
+	"dataset2/img18.jpg",
+	"dataset2/img19.jpg",
+	"dataset2/img20.jpg",
+	"dataset2/img21.jpg",
+	"dataset2/img22.jpg",
+	"dataset2/img23.jpg",
+	"dataset2/img24.jpg",
+	"dataset2/img25.jpg"
 };
-string result_name = "result";
+static string result_name = "result";
 
 // Size of the input images
-Size img_size(1920, 1080);
+static Size img_size(1920, 1080);
 
 // We resize the working copies to smaller sizes
-float feat_size = 0.2 * 1e6;
-float feat_factor = sqrt( feat_size / static_cast<float>(img_size.area()));
+static float feat_size = 0.3 * 1e6;
+static float feat_factor = sqrt( feat_size / static_cast<float>(img_size.area()));
+
+// Our camera object
+static Mat intrinsic = getDefaultNewCameraMatrix( Mat::eye( 3, 3, CV_64F), img_size, true);
+
+// Distruption coeffecients
+static float Coeffs[] = {-0.00000019f, 0.f, 0.f, 0.f};
+static Mat distCoeffs = Mat( 4, 1, CV_32F, Coeffs);
 
 // Options: SurfFeaturesFinder or OrbFeaturesFinder
 OrbFeaturesFinder featureFinder;
 
 // Confidences
-float conf_featurematching = 0.3f;
-float conf_adjustor        = 0.5f;
+static float conf_featurematching = 0.3f;
+static float conf_adjustor        = 0.5f;
 
 // options: BundleAdjusterReproj, BundleAdjusterRay
 BundleAdjusterRay adjuster;
 string ba_refine_mask = "xxxxx";
 
 // Exposure type
-int expos_comp_type = ExposureCompensator::GAIN_BLOCKS;
+int expos_comp_type = ExposureCompensator::GAIN;
 
 // Seamfinder algorithm. Options:
 //		NoSeamFinder, VoronoiSeamFinder, GraphCutSeamFinder(GraphCutSeamFinderBase::COST_COLOR),
@@ -85,15 +105,6 @@ int main(int argc, char* argv[])
 	Mat full_img, full_img2;
 	vector<ImageFeatures> features(img_names.size());
 	vector<Mat> images(img_names.size());
-	vector<Size> full_img_sizes(img_names.size());
-
-	// Our camera object
-	Mat intrinsic = getDefaultNewCameraMatrix( Mat::eye( 3, 3, CV_64F), img_size, true);
-
-	// Distruption coeffecients
-	Mat distCoeffs = Mat::zeros( 1, 4, CV_32F);
-	distCoeffs.at<float>(0) = -0.00000019;
-	//distCoeffs.at<double>(1) = -0.00000000000001;
 
 	// Distortion maps
 	Mat map1, map2;
@@ -101,7 +112,6 @@ int main(int argc, char* argv[])
 
 	for (unsigned int i = 0; i < img_names.size(); ++i) {
 		full_img = imread(img_names[i]);
-		full_img_sizes[i] = full_img.size();
 
 		if (full_img.empty()) {
 			cerr << "Can't open image " << img_names[i] << endl;
@@ -193,6 +203,10 @@ int main(int argc, char* argv[])
 	adjuster.setRefinementMask(refine_mask);
 	adjuster(features, pairwise_matches, cameras);
 
+	// Cleanup
+	features.clear();
+	pairwise_matches.clear();
+
 	cout << "Time: " << ((getTickCount() - t) / getTickFrequency()) << " sec,\t Adjustor" << endl;
 	t = getTickCount();
 
@@ -214,21 +228,20 @@ int main(int argc, char* argv[])
 	vector<Mat> masks_warped(img_names.size());
 	vector<Mat> images_warped(img_names.size());
 	vector<Size> sizes(img_names.size());
-	vector<Mat> masks(img_names.size());
 
-	// Prepapre images masks
-	for (unsigned int i = 0; i < img_names.size(); ++i) {
-		masks[i].create(images[i].size(), CV_8U);
-		masks[i].setTo(Scalar::all(255));
-	}
+	// Prepare images masks
+	Mat mask( images[0].size(), CV_8U);
 
 	// Warp images and their masks
 	Ptr<WarperCreator> warper_creator;
 	warper_creator = new cv::PlaneWarper();
 
-	Ptr<RotationWarper> warper = warper_creator->create(static_cast<float>(warped_image_scale));
+	Ptr<RotationWarper> warper = warper_creator->create( warped_image_scale);
 
 	for (unsigned int i = 0; i < img_names.size(); ++i) {
+
+		mask.setTo(Scalar::all(255));
+
 		Mat_<float> K;
 		cameras[i].K().convertTo(K, CV_32F);
 		float swa = 1.f;
@@ -238,15 +251,19 @@ int main(int argc, char* argv[])
 		corners[i] = warper->warp(images[i], K, cameras[i].R, INTER_LINEAR, BORDER_REFLECT, images_warped[i]);
 		sizes[i] = images_warped[i].size();
 
-		warper->warp(masks[i], K, cameras[i].R, INTER_NEAREST, BORDER_CONSTANT, masks_warped[i]);
+		warper->warp(mask, K, cameras[i].R, INTER_NEAREST, BORDER_CONSTANT, masks_warped[i]);
 	}
 
-	vector<Mat> images_warped_f(img_names.size());
-	for (unsigned int i = 0; i < img_names.size(); ++i)
-		images_warped[i].convertTo(images_warped_f[i], CV_32F);
+	mask.release();
 
 	Ptr<ExposureCompensator> compensator = ExposureCompensator::createDefault(expos_comp_type);
 	compensator->feed(corners, images_warped, masks_warped);
+
+	vector<Mat> images_warped_f(img_names.size());
+	for (unsigned int i = 0; i < img_names.size(); ++i) {
+		images_warped[i].convertTo(images_warped_f[i], CV_32F);
+		images_warped[i].release();
+	}
 
 	cout << "Time: " << ((getTickCount() - t) / getTickFrequency()) << " sec,\t warping images" << endl;
 	t = getTickCount();
@@ -258,13 +275,13 @@ int main(int argc, char* argv[])
 	images.clear();
 	images_warped.clear();
 	images_warped_f.clear();
-	masks.clear();
+	//masks.clear();
 
 	cout << "Time: " << ((getTickCount() - t) / getTickFrequency()) << " sec,\t Seam finder" << endl;
 	t = getTickCount();
 
 	Mat img_warped, img_warped_s;
-	Mat dilated_mask, seam_mask, mask, mask_warped;
+	Mat dilated_mask, seam_mask, mask_warped;
 	Ptr<Blender> blender;
 
 	// Compute relative scales
@@ -282,7 +299,7 @@ int main(int argc, char* argv[])
 		cameras[i].ppy *= compose_work_aspect;
 
 		// Update corner and size
-		Size sz = full_img_sizes[i];
+		Size sz = img_size;
 
 		Mat K;
 		cameras[i].K().convertTo(K, CV_32F);
