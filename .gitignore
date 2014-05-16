@@ -20,6 +20,7 @@ build/cmake_install.cmake
 build/CMakeCache.txt
 build/algo.cbp
 build/CMakeFiles/*
+CMakeLists.txt.user
 
 # But a few exceptions..
 !.gitignore
