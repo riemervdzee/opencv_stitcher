@@ -334,8 +334,6 @@ int main(int argc, char* argv[])
 		// Read image
 		img = imread(img_names[i]);
 
-		Size img_size = img.size();
-
 		remap(img, img2, map1, map2, INTER_LINEAR );
 
 		Mat K;
