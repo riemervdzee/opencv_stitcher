@@ -127,8 +127,10 @@ int main(int argc, char* argv[])
 		cout << "\tImage #" << (i+1) << ": " << features[i].keypoints.size() << endl;
 
 #if 0
-		string file = result_name + std::to_string( i ) + ".jpg";
-		imwrite(file, full_img2);
+		int zeros = 0;
+		if( i < 10) zeros = 1;
+		string file = "temp/" + result_name + std::string( zeros, '0') + std::to_string( i ) + ".jpg";
+		imwrite(file, temp);
 #endif
 	}
 
