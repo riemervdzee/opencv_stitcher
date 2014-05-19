@@ -68,21 +68,19 @@ void BundleAdjusterRay2::calcError(Mat &err)
 
 	for (size_t edge_idx = 0; edge_idx < edges_.size(); ++edge_idx)
 	{
-		int i = edges_[edge_idx].first;
-		int j = edges_[edge_idx].second;
+		unsigned int i = edges_[edge_idx].first;
+		unsigned int j = edges_[edge_idx].second;
 		double f1 = cam_params_.at<double>(i * 4, 0);
 		double f2 = cam_params_.at<double>(j * 4, 0);
 
-		double R1[9];
-		Mat R1_(3, 3, CV_64F, R1);
+		Mat R1_(3, 3, CV_64F);
 		Mat rvec(3, 1, CV_64F);
 		rvec.at<double>(0, 0) = cam_params_.at<double>(i * 4 + 1, 0);
 		rvec.at<double>(1, 0) = cam_params_.at<double>(i * 4 + 2, 0);
 		rvec.at<double>(2, 0) = cam_params_.at<double>(i * 4 + 3, 0);
 		Rodrigues(rvec, R1_);
 
-		double R2[9];
-		Mat R2_(3, 3, CV_64F, R2);
+		Mat R2_(3, 3, CV_64F);
 		rvec.at<double>(0, 0) = cam_params_.at<double>(j * 4 + 1, 0);
 		rvec.at<double>(1, 0) = cam_params_.at<double>(j * 4 + 2, 0);
 		rvec.at<double>(2, 0) = cam_params_.at<double>(j * 4 + 3, 0);
