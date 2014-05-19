@@ -102,7 +102,7 @@ int main(int argc, char* argv[])
 	cout << "Finding features:" << endl;
 	int64 t = getTickCount();
 
-	Mat full_img, full_img2;
+	Mat temp;
 	vector<ImageFeatures> features(img_names.size());
 	vector<Mat> images(img_names.size());
 
@@ -111,16 +111,16 @@ int main(int argc, char* argv[])
 	initUndistortRectifyMap( intrinsic, distCoeffs, Mat(), Mat(), img_size, CV_32FC1, map1, map2);
 
 	for (unsigned int i = 0; i < img_names.size(); ++i) {
-		full_img = imread(img_names[i]);
+		images[i] = imread(img_names[i]);
 
-		if (full_img.empty()) {
+		if (images[i].empty()) {
 			cerr << "Can't open image " << img_names[i] << endl;
 			return -1;
 		}
 
-		remap(full_img, full_img2, map1, map2, INTER_LINEAR );
+		remap(images[i], temp, map1, map2, INTER_LINEAR );
 
-		resize(full_img2, images[i], Size(), feat_factor, feat_factor);
+		resize(temp, images[i], Size(), feat_factor, feat_factor);
 
 		featureFinder(images[i], features[i]);
 		features[i].img_idx = i;
@@ -133,8 +133,7 @@ int main(int argc, char* argv[])
 	}
 
 	featureFinder.collectGarbage();
-	full_img.release();
-	full_img2.release();
+	temp.release();
 
 	cout << "Time: " << ((getTickCount() - t) / getTickFrequency()) << " sec,\t finding features" << endl;
 	t = getTickCount();
@@ -260,6 +259,7 @@ int main(int argc, char* argv[])
 	compensator->feed(corners, images_warped, masks_warped);
 
 	vector<Mat> images_warped_f(img_names.size());
+
 	for (unsigned int i = 0; i < img_names.size(); ++i) {
 		images_warped[i].convertTo(images_warped_f[i], CV_32F);
 		images_warped[i].release();
