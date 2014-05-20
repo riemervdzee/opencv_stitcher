@@ -15,8 +15,6 @@
 #include "opencv2/stitching/detail/warpers.hpp"
 #include "opencv2/stitching/warpers.hpp"
 
-#include "bundleadjusterray2.h"
-
 using namespace std;
 using namespace cv;
 using namespace cv::detail;
@@ -59,7 +57,7 @@ static string result_name = "result";
 static Size img_size(1920, 1080);
 
 // We resize the working copies to smaller sizes
-static float feat_size = 0.2 * 1e6;
+static float feat_size = 0.1 * 1e6;
 static float feat_factor = sqrt( feat_size / static_cast<float>(img_size.area()));
 
 // Our camera object
@@ -77,7 +75,7 @@ static float conf_featurematching = 0.3f;
 static float conf_adjustor        = 0.5f;
 
 // options: BundleAdjusterReproj, BundleAdjusterRay
-BundleAdjusterRay2 adjuster;
+BundleAdjusterRay adjuster;
 string ba_refine_mask = "xxxxx";
 
 // Exposure type
@@ -372,6 +370,9 @@ int main(int argc, char* argv[])
 
 	string file = result_name + ".jpg";
 	imwrite(file, result);
+
+	file = result_name + "_mask.jpg";
+	imwrite(file, result_mask);
 
 	cout << "Finished! total time: " << ((getTickCount() - app_start_time) / getTickFrequency()) << " sec" << endl;
 
