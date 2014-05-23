@@ -151,7 +151,7 @@ void Stitcher::stitch( std::vector<cv::Mat> &input,
 	Ptr<WarperCreator> warper_creator;
 	warper_creator = new cv::PlaneWarper();
 
-	Ptr<RotationWarper> warper = warper_creator->create( warped_image_scale);
+	Ptr<RotationWarper> warper = warper_creator->create( warped_image_scale * seam_factor);
 
 	for (size_t i = 0; i < input.size(); ++i) {
 
@@ -159,7 +159,7 @@ void Stitcher::stitch( std::vector<cv::Mat> &input,
 
 		Mat_<float> K;
 		cameras[i].K().convertTo(K, CV_32F);
-		float swa = 1.f;
+		float swa = seam_factor;
 		K(0,0) *= swa; K(0,2) *= swa;
 		K(1,1) *= swa; K(1,2) *= swa;
 
@@ -205,7 +205,7 @@ void Stitcher::stitch( std::vector<cv::Mat> &input,
 	Ptr<Blender> blender;
 
 	// Compute relative scales
-	double compose_work_aspect = (1/feat_factor) * (1/seam_factor);
+	double compose_work_aspect = (1/feat_factor);
 
 	// Update warped image scale
 	warped_image_scale *= compose_work_aspect;
