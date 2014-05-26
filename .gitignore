@@ -21,6 +21,7 @@ build/CMakeCache.txt
 build/algo.cbp
 build/CMakeFiles/*
 CMakeLists.txt.user
+build/temp/
 
 # But a few exceptions..
 !.gitignore
