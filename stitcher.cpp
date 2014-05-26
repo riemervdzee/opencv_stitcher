@@ -57,6 +57,10 @@ void Stitcher::stitch( std::vector<cv::Mat> &input,
 
 	double feat_factor = sqrt( feat_res_ /  imgSize.area());
 	double seam_factor = sqrt( seam_res_ / feat_res_);
+	double comp_factor = 1;
+
+	if( comp_res_ != Stitcher::ORIGINAL_RES)
+		comp_factor = sqrt( comp_res_ / imgSize.area());
 
 	for (size_t i = 0; i < images.size(); ++i)
 	{
@@ -205,7 +209,7 @@ void Stitcher::stitch( std::vector<cv::Mat> &input,
 	Ptr<Blender> blender;
 
 	// Compute relative scales
-	double compose_work_aspect = (1/feat_factor);
+	double compose_work_aspect = comp_factor/feat_factor;
 
 	// Update warped image scale
 	warped_image_scale *= compose_work_aspect;
@@ -215,11 +219,16 @@ void Stitcher::stitch( std::vector<cv::Mat> &input,
 	for (unsigned int i = 0; i < input.size(); ++i) {
 		// Update intrinsics
 		cameras[i].focal *= compose_work_aspect;
-		cameras[i].ppx *= compose_work_aspect;
-		cameras[i].ppy *= compose_work_aspect;
+		cameras[i].ppx   *= compose_work_aspect;
+		cameras[i].ppy   *= compose_work_aspect;
 
 		// Update corner and size
 		Size sz = imgSize;
+		if( comp_res_ != Stitcher::ORIGINAL_RES)
+		{
+			sz.width  = cvRound(imgSize.width  * comp_factor);
+			sz.height = cvRound(imgSize.height * comp_factor);
+		}
 
 		Mat K;
 		cameras[i].K().convertTo(K, CV_32F);
@@ -247,15 +256,25 @@ void Stitcher::stitch( std::vector<cv::Mat> &input,
 	blender->prepare(corners, sizes);
 
 	Mat img_warped, img_warped_s;
-	mask.create(imgSize, CV_8U);
+	Size sz;
+	sz.width  = cvRound(imgSize.width  * comp_factor);
+	sz.height = cvRound(imgSize.height * comp_factor);
+	mask.create(sz, CV_8U);
 
 	for (size_t i = 0; i < input.size(); ++i) {
 		Mat K;
 		cameras[i].K().convertTo(K, CV_32F);
 
-		// Warp the current image
-		warper->warp(input[i], K, cameras[i].R, INTER_LINEAR, BORDER_REFLECT, img_warped);
+		// Additional resize
+		if( comp_res_ != Stitcher::ORIGINAL_RES)
+			resize( input[i], temp, Size(), comp_factor, comp_factor);
+		else
+			temp = input[i];
+
 		input[i].release();
+
+		// Warp the current image
+		warper->warp(temp, K, cameras[i].R, INTER_LINEAR, BORDER_REFLECT, img_warped);
 
 		// Warp the current image mask
 		mask.setTo(Scalar::all(255));

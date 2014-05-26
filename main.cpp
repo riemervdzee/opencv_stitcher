@@ -97,6 +97,7 @@ int main(int argc, char* argv[])
 	stitcher.set_feat_res      (0.8 * 1e6);
 	stitcher.set_seam_res      (0.1 * 1e6);
 	stitcher.set_feature_finder( Ptr<FeaturesFinder>( new OrbFeaturesFinder( Size(1,1), 3500)));
+	stitcher.set_comp_res      (1.0 * 1e6);
 	stitcher.set_conf_adjustor (0.95f);
 	stitcher.set_conf_featurematching( 0.35f);
 
