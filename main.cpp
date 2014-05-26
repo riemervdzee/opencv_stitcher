@@ -17,29 +17,29 @@ using namespace cv::detail;
 // Files
 static vector<string> img_names = {
 	"dataset2/img01.jpg",
-	"dataset2/img02.jpg",
-	"dataset2/img03.jpg",
+//	"dataset2/img02.jpg",
+//	"dataset2/img03.jpg",
 	"dataset2/img04.jpg",
-	"dataset2/img05.jpg",
-	"dataset2/img06.jpg",
+//	"dataset2/img05.jpg",
+//	"dataset2/img06.jpg",
 	"dataset2/img07.jpg",
-	"dataset2/img08.jpg",
-	"dataset2/img09.jpg",
+//	"dataset2/img08.jpg",
+//	"dataset2/img09.jpg",
 	"dataset2/img10.jpg",
-	"dataset2/img11.jpg",
-	"dataset2/img12.jpg",
+//	"dataset2/img11.jpg",
+//	"dataset2/img12.jpg",
 	"dataset2/img13.jpg",
-	"dataset2/img14.jpg",
-	"dataset2/img15.jpg",
+//	"dataset2/img14.jpg",
+//	"dataset2/img15.jpg",
 	"dataset2/img16.jpg",
-	"dataset2/img17.jpg",
-	"dataset2/img18.jpg",
+//	"dataset2/img17.jpg",
+//	"dataset2/img18.jpg",
 	"dataset2/img19.jpg",
-	"dataset2/img20.jpg",
-	"dataset2/img21.jpg",
+//	"dataset2/img20.jpg",
+//	"dataset2/img21.jpg",
 	"dataset2/img22.jpg",
-	"dataset2/img23.jpg",
-	"dataset2/img24.jpg",
+//	"dataset2/img23.jpg",
+//	"dataset2/img24.jpg",
 	"dataset2/img25.jpg",
 };
 static string result_name = "result";
@@ -94,8 +94,11 @@ int main(int argc, char* argv[])
 	Mat result, result_mask;
 	Stitcher stitcher;
 	stitcher.set_matching_mask (matchMask);
-	stitcher.set_feat_res      (0.15 * 1e6);
-	stitcher.set_seam_res      (0.10 * 1e6);
+	stitcher.set_feat_res      (0.8 * 1e6);
+	stitcher.set_seam_res      (0.1 * 1e6);
+	stitcher.set_feature_finder( Ptr<FeaturesFinder>( new OrbFeaturesFinder( Size(1,1), 3500)));
+	stitcher.set_conf_adjustor (0.95f);
+	stitcher.set_conf_featurematching( 0.35f);
 
 	stitcher.stitch( images, result, result_mask, img_size);
 
