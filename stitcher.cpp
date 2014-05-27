@@ -40,6 +40,15 @@ Status Stitcher::stitch( std::vector<cv::Mat> &input,
 	int64 t = getTickCount();
 #endif
 
+	// Check if have enough images
+	// We want more than 2 images in general. input_masks is either zero or the same as input.size()
+	if ( input.size() < 2 || (input_masks.size() != 0 && input.size() != input_masks.size()) )
+	{
+		cerr << "Incorrect amount of images.";
+		cerr << "input.size() = " << input.size() << ", input_masks.size() = " << input_masks.size() << endl;
+		return Status::ERR_NEED_MORE_IMGS;
+	}
+
 	vector<Mat> images = input;
 	vector<ImageFeatures> features( images.size());
 	Mat temp;
@@ -93,6 +102,10 @@ Status Stitcher::stitch( std::vector<cv::Mat> &input,
 	vector<CameraParams> cameras;
 	estimator( features, pairwise_matches, cameras);
 
+	// Check if we failed (in OpenCV 3 we have better options to check this)
+	if( isnan( cameras[0].R.at<float>(0,0)))
+		return Status::ERR_HOMOGRAPHY_EST_FAIL;
+
 #ifdef DEBUG
 	for (size_t i = 0; i < cameras.size(); ++i)
 		cout << "Initial intrinsics #" << (i+1) << ":\n" << cameras[i].K() << endl;
@@ -123,7 +136,10 @@ Status Stitcher::stitch( std::vector<cv::Mat> &input,
 	adjuster_->setRefinementMask( refine_mask);
 	adjuster_->operator()( features, pairwise_matches, cameras);
 
-	// Cleanup
+	// Check if we failed (in OpenCV 3 we have better options to check this)
+	if( isnan( cameras[0].R.at<float>(0,0)))
+		return Status::ERR_CAMERA_PARAMS_ADJUST_FAIL;
+
 	features.clear();
 	pairwise_matches.clear();
 

@@ -101,12 +101,18 @@ int main(int argc, char* argv[])
 	stitcher.set_conf_adjustor (0.95f);
 	stitcher.set_conf_featurematching( 0.35f);
 
-	stitcher.stitch( images, result, result_mask, img_size);
+	Status ret = stitcher.stitch( images, result, result_mask, img_size);
+	if( ret == Status::OK)
+	{
+		// Save
+		string file = result_name + ".jpg";
+		imwrite(file, result);
 
-	// Save
-	string file = result_name + ".jpg";
-	imwrite(file, result);
+		file = result_name + "_mask.jpg";
+		imwrite(file, result_mask);
+	}
+	else
+		cerr << "Stitching failed with errorcode: " << (int)ret << endl;
 
-	file = result_name + "_mask.jpg";
-	imwrite(file, result_mask);
+	return (int)ret;
 }
