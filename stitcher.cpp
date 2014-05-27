@@ -157,7 +157,7 @@ Status Stitcher::stitch( std::vector<cv::Mat> &input,
 	// Find median focal length
 	vector<double> focals( cameras.size());
 	for (size_t i = 0; i < cameras.size(); ++i)
-		focals.push_back(cameras[i].focal);
+		focals[i] = cameras[i].focal;
 
 	sort(focals.begin(), focals.end());
 	double warped_image_scale;
