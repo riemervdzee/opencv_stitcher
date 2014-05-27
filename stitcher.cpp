@@ -26,24 +26,25 @@ Stitcher::Stitcher()
 	set_blend_strength( 5.f);
 }
 
-void Stitcher::stitch( std::vector<cv::Mat> &input,
+Status Stitcher::stitch( std::vector<cv::Mat> &input,
 					   std::vector<cv::Mat> &input_masks,
-					   cv::Mat &result,
-					   cv::Mat &result_mask,
+					   cv::Mat  &result,
+					   cv::Mat  &result_mask,
 					   cv::Size &imgSize)
 {
 #ifdef DEBUG
 	cv::setBreakOnError(true);
 
 	cout << "Finding features:" << endl;
-	int64 t = getTickCount();
 	int64 app_start_time = getTickCount();
+	int64 t = getTickCount();
 #endif
 
 	vector<Mat> images = input;
 	vector<ImageFeatures> features( images.size());
 	Mat temp;
 
+	// Get the factors from img->feat, feat->seam and img->compositioning
 	double feat_factor = sqrt( feat_res_ /  imgSize.area());
 	double seam_factor = sqrt( seam_res_ / feat_res_);
 	double comp_factor = 1;
@@ -51,6 +52,7 @@ void Stitcher::stitch( std::vector<cv::Mat> &input,
 	if( comp_res_ != Stitcher::ORIGINAL_RES)
 		comp_factor = sqrt( comp_res_ / imgSize.area());
 
+	// Loop through all images, resize to find features. Then resize to be used for seaming
 	for (size_t i = 0; i < images.size(); ++i)
 	{
 		resize( images[i], temp, Size(), feat_factor, feat_factor);
@@ -59,20 +61,21 @@ void Stitcher::stitch( std::vector<cv::Mat> &input,
 		features[i].img_idx = i;
 
 		resize( temp, images[i], Size(), seam_factor, seam_factor);
-
-#ifdef DEBUG
-		cout << "\tImage #" << (i+1) << ": " << features[i].keypoints.size() << endl;
-#endif
 	}
 
 	feature_finder_->collectGarbage();
 	temp.release();
 
 #ifdef DEBUG
+	for (size_t i = 0; i < images.size(); ++i)
+		cout << "\tImage #" << (i+1) << ": " << features[i].keypoints.size() << endl;
+
 	cout << "Time: " << ((getTickCount() - t) / getTickFrequency()) << " sec,\t finding features" << endl;
 	t = getTickCount();
 #endif
 
+
+	// Now we match the features according the featurematching-mask
 	vector<MatchesInfo> pairwise_matches;
 	BestOf2NearestMatcher matcher( false, conf_featurematching_);
 
@@ -84,20 +87,30 @@ void Stitcher::stitch( std::vector<cv::Mat> &input,
 	t = getTickCount();
 #endif
 
+
+	// First attempt to get the images aligned to eachother
 	HomographyBasedEstimator estimator;
 	vector<CameraParams> cameras;
 	estimator( features, pairwise_matches, cameras);
 
-	cout << "Time: " << ((getTickCount() - t) / getTickFrequency()) << " sec,\t Estimator" << endl;
-	t = getTickCount();
+#ifdef DEBUG
+	for (size_t i = 0; i < cameras.size(); ++i)
+		cout << "Initial intrinsics #" << (i+1) << ":\n" << cameras[i].K() << endl;
 
-	for (size_t i = 0; i < cameras.size(); ++i) {
+	cout << "Time: " << ((getTickCount() - t) / getTickFrequency()) << " sec,\t Homography Estimator" << endl;
+	t = getTickCount();
+#endif
+
+
+	// Convert cameras to floats
+	for (size_t i = 0; i < cameras.size(); ++i)
+	{
 		Mat R;
 		cameras[i].R.convertTo(R, CV_32F);
 		cameras[i].R = R;
-		//cout << "Initial intrinsics #" << (i+1) << ":\n" << cameras[i].K() << endl;
 	}
 
+	// setup refinement mask
 	Mat_<uchar> refine_mask = Mat::zeros(3, 3, CV_8U);
 	if (adjuster_mask_[0] == 'x') refine_mask(0,0) = 1;
 	if (adjuster_mask_[1] == 'x') refine_mask(0,1) = 1;
@@ -105,6 +118,7 @@ void Stitcher::stitch( std::vector<cv::Mat> &input,
 	if (adjuster_mask_[3] == 'x') refine_mask(1,1) = 1;
 	if (adjuster_mask_[4] == 'x') refine_mask(1,2) = 1;
 
+	// Execute adjuster
 	adjuster_->setConfThresh( conf_adjustor_);
 	adjuster_->setRefinementMask( refine_mask);
 	adjuster_->operator()( features, pairwise_matches, cameras);
@@ -114,16 +128,18 @@ void Stitcher::stitch( std::vector<cv::Mat> &input,
 	pairwise_matches.clear();
 
 #ifdef DEBUG
+	for (size_t i = 0; i < cameras.size(); ++i)
+		cout << "Camera #" << i+1 << ":\n" << cameras[i].K() << endl;
+
 	cout << "Time: " << ((getTickCount() - t) / getTickFrequency()) << " sec,\t Adjustor" << endl;
 	t = getTickCount();
 #endif
 
+
 	// Find median focal length
-	vector<double> focals;
-	for (size_t i = 0; i < cameras.size(); ++i) {
-		//cout << "Camera #" << indices[i]+1 << ":\n" << cameras[i].K() << endl;
+	vector<double> focals( cameras.size());
+	for (size_t i = 0; i < cameras.size(); ++i)
 		focals.push_back(cameras[i].focal);
-	}
 
 	sort(focals.begin(), focals.end());
 	double warped_image_scale;
@@ -132,22 +148,19 @@ void Stitcher::stitch( std::vector<cv::Mat> &input,
 	else
 		warped_image_scale = (focals[focals.size() / 2 - 1] + focals[focals.size() / 2]) * 0.5f;
 
-	vector<Point> corners       (input.size());
-	vector<Mat>   masks_warped  (input.size());
-	vector<Mat>   images_warped (input.size());
-	vector<Size>  sizes         (input.size());
-
-	// Prepare images masks
+	// Prepare variables used
+	vector<Point> corners       ( input.size());
+	vector<Mat>   masks_warped  ( input.size());
+	vector<Mat>   images_warped ( input.size());
+	vector<Size>  sizes         ( input.size());
 	Mat mask( images[0].size(), CV_8U);
 
-	// Warp images and their masks
-	Ptr<WarperCreator> warper_creator;
-	warper_creator = new cv::PlaneWarper();
+	// Warp images and their masks to the adjuster found cameras
+	Ptr<WarperCreator>  warper_creator = new cv::PlaneWarper();
+	Ptr<RotationWarper> warper         = warper_creator->create( warped_image_scale * seam_factor);
 
-	Ptr<RotationWarper> warper = warper_creator->create( warped_image_scale * seam_factor);
-
-	for (size_t i = 0; i < input.size(); ++i) {
-
+	for (size_t i = 0; i < input.size(); ++i)
+	{
 		mask.setTo(Scalar::all(255));
 
 		Mat_<float> K;
@@ -157,36 +170,33 @@ void Stitcher::stitch( std::vector<cv::Mat> &input,
 		K(1,1) *= swa; K(1,2) *= swa;
 
 		corners[i] = warper->warp(images[i], K, cameras[i].R, INTER_LINEAR, BORDER_REFLECT, images_warped[i]);
-		sizes[i] = images_warped[i].size();
+		sizes  [i] = images_warped[i].size();
 
 		warper->warp(mask, K, cameras[i].R, INTER_NEAREST, BORDER_CONSTANT, masks_warped[i]);
 	}
 
-	// Clear memory
 	images.clear();
 	mask.release();
 
+	// Feed the images to the gain exposure compensator
 	Ptr<ExposureCompensator> compensator = ExposureCompensator::createDefault(exposure_type_);
 	compensator->feed(corners, images_warped, masks_warped);
 
+	// Convert to floats
 	vector<Mat> images_warped_f(input.size());
-
-	for (size_t i = 0; i < input.size(); ++i) {
+	for (size_t i = 0; i < input.size(); ++i)
 		images_warped[i].convertTo(images_warped_f[i], CV_32F);
-		images_warped[i].release();
-	}
 
 	images_warped.clear();
 
 #ifdef DEBUG
-	cout << "Time: " << ((getTickCount() - t) / getTickFrequency()) << " sec,\t warping images" << endl;
+	cout << "Time: " << ((getTickCount() - t) / getTickFrequency()) << " sec,\t warping images/masks, gain-feed" << endl;
 	t = getTickCount();
 #endif
 
-	// Find seam
-	seam_finder_->find(images_warped_f, corners, masks_warped);
 
-	// Release unused memory
+	// Find seam between the images
+	seam_finder_->find( images_warped_f, corners, masks_warped);
 	images_warped_f.clear();
 
 #ifdef DEBUG
@@ -194,18 +204,15 @@ void Stitcher::stitch( std::vector<cv::Mat> &input,
 	t = getTickCount();
 #endif
 
-	Mat dilated_mask, seam_mask, mask_warped;
-	Ptr<Blender> blender;
 
-	// Compute relative scales
+	// Compute relative scales and update them
 	double compose_work_aspect = comp_factor/feat_factor;
-
-	// Update warped image scale
-	warped_image_scale *= compose_work_aspect;
-	warper = warper_creator->create(warped_image_scale);
+	warped_image_scale        *= compose_work_aspect;
+	warper                     = warper_creator->create( warped_image_scale);
 
 	// Update corners and sizes
-	for (unsigned int i = 0; i < input.size(); ++i) {
+	for (size_t i = 0; i < input.size(); ++i)
+	{
 		// Update intrinsics
 		cameras[i].focal *= compose_work_aspect;
 		cameras[i].ppx   *= compose_work_aspect;
@@ -226,8 +233,10 @@ void Stitcher::stitch( std::vector<cv::Mat> &input,
 		sizes[i] = roi.size();
 	}
 
-	blender = Blender::createDefault(blend_type_, false);
+	// Setup blender
 	Size dst_sz = resultRoi(corners, sizes).size();
+	Ptr<Blender> blender = Blender::createDefault(blend_type_, false);
+
 	float blend_width = sqrt(static_cast<float>(dst_sz.area())) * blend_strength_ / 100.f;
 	if (blend_width < 1.f)
 		blender = Blender::createDefault(Blender::NO, false);
@@ -242,15 +251,17 @@ void Stitcher::stitch( std::vector<cv::Mat> &input,
 		fb->setSharpness(1.f/blend_width);
 	}
 
+	// Prepare the blender
 	blender->prepare(corners, sizes);
 
-	Mat img_warped, img_warped_s;
-	Size sz;
-	sz.width  = cvRound(imgSize.width  * comp_factor);
-	sz.height = cvRound(imgSize.height * comp_factor);
-	mask.create(sz, CV_8U);
 
-	for (size_t i = 0; i < input.size(); ++i) {
+	Size sz( cvRound(imgSize.width  * comp_factor), cvRound(imgSize.height * comp_factor));
+	mask.create(sz, CV_8U);
+	Mat img_warped, img_warped_s, dilated_mask, seam_mask, mask_warped;
+
+	// Add all images to the blender with fully warped img/masks and found cornerns
+	for (size_t i = 0; i < input.size(); ++i)
+	{
 		Mat K;
 		cameras[i].K().convertTo(K, CV_32F);
 
@@ -284,7 +295,6 @@ void Stitcher::stitch( std::vector<cv::Mat> &input,
 		blender->feed(img_warped_s, mask_warped, corners[i]);
 	}
 
-	//
 	input.clear();
 	input_masks.clear();
 
@@ -296,5 +306,5 @@ void Stitcher::stitch( std::vector<cv::Mat> &input,
 	cout << "Finished! total time: " << ((getTickCount() - app_start_time) / getTickFrequency()) << " sec" << endl;
 #endif
 
-	return;
+	return Status::OK;
 }

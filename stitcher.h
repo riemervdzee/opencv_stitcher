@@ -14,9 +14,9 @@
 enum class Status
 {
 	OK = 0,
-	ERR_NEED_MORE_IMGS = 1,
-	ERR_HOMOGRAPHY_EST_FAIL = 2,
-	ERR_CAMERA_PARAMS_ADJUST_FAIL = 3
+	ERR_NEED_MORE_IMGS = -1,
+	ERR_HOMOGRAPHY_EST_FAIL = -2,
+	ERR_CAMERA_PARAMS_ADJUST_FAIL = -3,
 };
 
 /**
@@ -88,11 +88,11 @@ public:
 	 * @param result  name of the file the result should be saved to. Don't add extensions
 	 * @param imgSize Size of the original photos
 	 */
-	void stitch( std::vector<cv::Mat> &input,
+	Status stitch( std::vector<cv::Mat> &input,
 				 cv::Mat  &result,
 				 cv::Mat  &result_mask,
 				 cv::Size &imgSize)
-		{ std::vector<cv::Mat> vec; stitch( input, vec, result, result_mask, imgSize); }
+		{ std::vector<cv::Mat> vec; return stitch( input, vec, result, result_mask, imgSize); }
 
 	/**
 	 * @brief stitch
@@ -101,7 +101,7 @@ public:
 	 * @param result      name of the file the result should be saved to. Don't add extensions
 	 * @param imgSize     Size of the original/non-stitched photos
 	 */
-	void stitch( std::vector<cv::Mat> &input,
+	Status stitch( std::vector<cv::Mat> &input,
 				 std::vector<cv::Mat> &input_masks,
 				 cv::Mat &result,
 				 cv::Mat &result_mask,
