@@ -51,6 +51,7 @@ Status Stitcher::stitch( std::vector<cv::Mat> &input,
 
 	vector<Mat> images = input;
 	vector<ImageFeatures> features( images.size());
+	vector<Size> full_img_sizes(images.size());
 	Mat temp;
 
 	// Get the factors from img->feat, feat->seam and img->compositioning
@@ -64,6 +65,7 @@ Status Stitcher::stitch( std::vector<cv::Mat> &input,
 	// Loop through all images, resize to find features. Then resize to be used for seaming
 	for (size_t i = 0; i < images.size(); ++i)
 	{
+		full_img_sizes[i] = images[i].size();
 		resize( images[i], temp, Size(), feat_factor, feat_factor);
 
 		feature_finder_->operator()( temp, features[i]);
@@ -169,7 +171,6 @@ Status Stitcher::stitch( std::vector<cv::Mat> &input,
 	vector<Mat>   masks_warped  ( input.size());
 	vector<Mat>   images_warped ( input.size());
 	vector<Size>  sizes         ( input.size());
-	Mat mask( images[0].size(), CV_8U);
 
 	// Warp images and their masks to the adjuster found cameras
 	Ptr<WarperCreator>  warper_creator = new cv::PlaneWarper();
@@ -177,6 +178,7 @@ Status Stitcher::stitch( std::vector<cv::Mat> &input,
 
 	for (size_t i = 0; i < input.size(); ++i)
 	{
+		Mat mask( images[i].size(), CV_8U);
 		mask.setTo(Scalar::all(255));
 
 		Mat_<float> K;
@@ -192,7 +194,6 @@ Status Stitcher::stitch( std::vector<cv::Mat> &input,
 	}
 
 	images.clear();
-	mask.release();
 
 	// Feed the images to the gain exposure compensator
 	Ptr<ExposureCompensator> compensator = ExposureCompensator::createDefault(exposure_type_);
@@ -235,11 +236,11 @@ Status Stitcher::stitch( std::vector<cv::Mat> &input,
 		cameras[i].ppy   *= compose_work_aspect;
 
 		// Update corner and size
-		Size sz = imgSize;
+		Size sz = full_img_sizes[i];
 		if( comp_res_ != Stitcher::ORIGINAL_RES)
 		{
-			sz.width  = cvRound(imgSize.width  * comp_factor);
-			sz.height = cvRound(imgSize.height * comp_factor);
+			sz.width  = cvRound(full_img_sizes[i].width  * comp_factor);
+			sz.height = cvRound(full_img_sizes[i].height * comp_factor);
 		}
 
 		Mat K;
@@ -270,9 +271,6 @@ Status Stitcher::stitch( std::vector<cv::Mat> &input,
 	// Prepare the blender
 	blender->prepare(corners, sizes);
 
-
-	Size sz( cvRound(imgSize.width  * comp_factor), cvRound(imgSize.height * comp_factor));
-	mask.create(sz, CV_8U);
 	Mat img_warped, img_warped_s, dilated_mask, seam_mask, mask_warped;
 
 	// Add all images to the blender with fully warped img/masks and found cornerns
@@ -293,6 +291,7 @@ Status Stitcher::stitch( std::vector<cv::Mat> &input,
 		warper->warp(temp, K, cameras[i].R, INTER_LINEAR, BORDER_REFLECT, img_warped);
 
 		// Warp the current image mask
+		Mat mask(temp.size(), CV_8U);
 		mask.setTo(Scalar::all(255));
 		warper->warp(mask, K, cameras[i].R, INTER_NEAREST, BORDER_CONSTANT, mask_warped);
 
@@ -302,6 +301,7 @@ Status Stitcher::stitch( std::vector<cv::Mat> &input,
 		img_warped.convertTo(img_warped_s, CV_16S);
 		img_warped.release();
 
+		// Combine masks
 		dilate(masks_warped[i], dilated_mask, Mat());
 		resize(dilated_mask, seam_mask, mask_warped.size());
 
