@@ -38,6 +38,9 @@ public:
 	/**
 	  * Getter/setter functions for all stitch options
 	  */
+	double img_res() const { return img_res_; }
+	void set_img_res(double img_res) { img_res_ = img_res; }
+
 	double feat_res() const { return feat_res_; }
 	void set_feat_res(double feat_res) { feat_res_ = feat_res; }
 
@@ -90,9 +93,8 @@ public:
 	 */
 	Status stitch( std::vector<cv::Mat> &input,
 				 cv::Mat  &result,
-				 cv::Mat  &result_mask,
-				 cv::Size &imgSize)
-		{ std::vector<cv::Mat> vec; return stitch( input, vec, result, result_mask, imgSize); }
+				 cv::Mat  &result_mask)
+		{ std::vector<cv::Mat> vec; return stitch( input, vec, result, result_mask); }
 
 	/**
 	 * @brief stitch
@@ -104,14 +106,14 @@ public:
 	Status stitch( std::vector<cv::Mat> &input,
 				 std::vector<cv::Mat> &input_masks,
 				 cv::Mat &result,
-				 cv::Mat &result_mask,
-				 cv::Size &imgSize);
+				 cv::Mat &result_mask);
 
 protected:
 	/***************************
 	 * Options of the stitcher *
 	 ***************************/
 	// Resolutions used for: feature matching, seam finding, compositioning
+	double img_res_;
 	double feat_res_;
 	double seam_res_;
 	double comp_res_;

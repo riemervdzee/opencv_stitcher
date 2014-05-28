@@ -12,6 +12,7 @@ using namespace cv::detail;
 
 Stitcher::Stitcher()
 {
+	set_img_res ( 2.0 * 1e6);
 	set_feat_res( 0.6 * 1e6);
 	set_seam_res( 0.1 * 1e6);
 	set_comp_res( Stitcher::ORIGINAL_RES);
@@ -29,8 +30,7 @@ Stitcher::Stitcher()
 Status Stitcher::stitch( std::vector<cv::Mat> &input,
 					   std::vector<cv::Mat> &input_masks,
 					   cv::Mat  &result,
-					   cv::Mat  &result_mask,
-					   cv::Size &imgSize)
+					   cv::Mat  &result_mask)
 {
 #ifdef DEBUG
 	cv::setBreakOnError(true);
@@ -55,12 +55,12 @@ Status Stitcher::stitch( std::vector<cv::Mat> &input,
 	Mat temp;
 
 	// Get the factors from img->feat, feat->seam and img->compositioning
-	double feat_factor = sqrt( feat_res_ /  imgSize.area());
+	double feat_factor = sqrt( feat_res_ /  img_res_);
 	double seam_factor = sqrt( seam_res_ / feat_res_);
 	double comp_factor = 1;
 
 	if( comp_res_ != Stitcher::ORIGINAL_RES)
-		comp_factor = sqrt( comp_res_ / imgSize.area());
+		comp_factor = sqrt( comp_res_ / img_res_);
 
 	// Loop through all images, resize to find features. Then resize to be used for seaming
 	for (size_t i = 0; i < images.size(); ++i)
