@@ -16,31 +16,31 @@ using namespace cv::detail;
 
 // Files
 static vector<string> img_names = {
-	"dataset2/img01.jpg",
-//	"dataset2/img02.jpg",
-//	"dataset2/img03.jpg",
-	"dataset2/img04.jpg",
-//	"dataset2/img05.jpg",
-//	"dataset2/img06.jpg",
-	"dataset2/img07.jpg",
-//	"dataset2/img08.jpg",
-//	"dataset2/img09.jpg",
-	"dataset2/img10.jpg",
-//	"dataset2/img11.jpg",
-//	"dataset2/img12.jpg",
-	"dataset2/img13.jpg",
-//	"dataset2/img14.jpg",
-//	"dataset2/img15.jpg",
-	"dataset2/img16.jpg",
-//	"dataset2/img17.jpg",
-//	"dataset2/img18.jpg",
-	"dataset2/img19.jpg",
-//	"dataset2/img20.jpg",
-//	"dataset2/img21.jpg",
-	"dataset2/img22.jpg",
-//	"dataset2/img23.jpg",
-//	"dataset2/img24.jpg",
-	"dataset2/img25.jpg",
+	"dataset2/img01",
+//	"dataset2/img02",
+//	"dataset2/img03",
+	"dataset2/img04",
+//	"dataset2/img05",
+//	"dataset2/img06",
+	"dataset2/img07",
+//	"dataset2/img08",
+//	"dataset2/img09",
+	"dataset2/img10",
+//	"dataset2/img11",
+//	"dataset2/img12",
+	"dataset2/img13",
+//	"dataset2/img14",
+//	"dataset2/img15",
+	"dataset2/img16",
+//	"dataset2/img17",
+//	"dataset2/img18",
+	"dataset2/img19",
+//	"dataset2/img20",
+//	"dataset2/img21",
+	"dataset2/img22",
+//	"dataset2/img23",
+//	"dataset2/img24",
+	"dataset2/img25",
 };
 static string result_name = "result";
 
@@ -55,31 +55,56 @@ static float Coeffs[] = {-0.00000019f, 0.f, 0.f, 0.f};
 static Mat distCoeffs = Mat( 4, 1, CV_32F, Coeffs);
 
 
+// Program options, to be set via cli arg?
+static bool arg_remap      = true;
+static bool arg_have_masks = false;
+
+
 int main(int argc, char* argv[])
 {
-	vector<Mat> images(img_names.size());
 	Mat map1, map2, temp;
+	vector<Mat> images, images_masks;
+	images.reserve(img_names.size());
+
+	if(arg_have_masks)
+		images_masks.reserve(img_names.size());
 
 	// Calculate distortion maps
-	initUndistortRectifyMap( intrinsic, distCoeffs, Mat(), Mat(), img_size, CV_32FC1, map1, map2);
+	if(arg_remap)
+		initUndistortRectifyMap( intrinsic, distCoeffs, Mat(), Mat(), img_size, CV_32FC1, map1, map2);
 
 	// Load images and remap them
 	for (unsigned int i = 0; i < img_names.size(); ++i) {
-		temp = imread(img_names[i]);
+		temp = imread(img_names[i] + ".jpg");
 
 		if (temp.empty()) {
-			cerr << "Can't open image " << img_names[i] << endl;
+			cerr << "Can't open image " << img_names[i] << ".jpg" << endl;
 			return -1;
 		}
 
-		remap(temp, images[i], map1, map2, INTER_LINEAR );
+		if(arg_remap)
+			remap(temp, temp, map1, map2, INTER_LINEAR );
+
+		images.push_back( temp);
 
 #if 0
+		// Output remapped images to files
 		int zeros = 0;
 		if( i < 10) zeros = 1;
 		string file = "temp/" + result_name + std::string( zeros, '0') + std::to_string( i ) + ".jpg";
 		imwrite(file, images[i]);
 #endif
+
+		if(arg_have_masks) {
+			temp = imread(img_names[i] + "_mask.jpg", CV_8U);
+
+			if (temp.empty()) {
+				cerr << "Can't open image " << img_names[i] << "_mask.jpg"  << endl;
+				return -1;
+			}
+
+			images_masks.push_back( temp);
+		}
 	}
 	temp.release();
 	map1.release();
@@ -101,7 +126,7 @@ int main(int argc, char* argv[])
 	stitcher.set_conf_adjustor (0.95f);
 	stitcher.set_conf_featurematching( 0.35f);
 
-	Status ret = stitcher.stitch( images, result, result_mask, img_size);
+	Status ret = stitcher.stitch( images, images_masks, result, result_mask, img_size);
 	if( ret == Status::OK)
 	{
 		// Save
