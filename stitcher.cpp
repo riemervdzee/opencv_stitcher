@@ -178,8 +178,13 @@ Status Stitcher::stitch( std::vector<cv::Mat> &input,
 
 	for (size_t i = 0; i < input.size(); ++i)
 	{
-		Mat mask( images[i].size(), CV_8U);
-		mask.setTo(Scalar::all(255));
+		Mat mask;
+		if( input_masks.size() == 0) {
+			mask.create( images[i].size(), CV_8U);
+			mask.setTo( Scalar::all(255));
+		}
+		else
+			resize( input_masks[i], mask, images[i].size());
 
 		Mat_<float> K;
 		cameras[i].K().convertTo(K, CV_32F);
@@ -291,8 +296,14 @@ Status Stitcher::stitch( std::vector<cv::Mat> &input,
 		warper->warp(temp, K, cameras[i].R, INTER_LINEAR, BORDER_REFLECT, img_warped);
 
 		// Warp the current image mask
-		Mat mask(temp.size(), CV_8U);
-		mask.setTo(Scalar::all(255));
+		Mat mask;
+		if( input_masks.size() == 0) {
+			mask.create( temp.size(), CV_8U);
+			mask.setTo( Scalar::all(255));
+		}
+		else
+			resize( input_masks[i], mask, temp.size());
+
 		warper->warp(mask, K, cameras[i].R, INTER_NEAREST, BORDER_CONSTANT, mask_warped);
 
 		// Compensate exposure
