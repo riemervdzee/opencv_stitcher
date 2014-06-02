@@ -87,26 +87,18 @@ public:
 
 	/**
 	 * @brief stitch
-	 * @param input   preloaded images who are about to get stitched
-	 * @param result  name of the file the result should be saved to. Don't add extensions
-	 * @param imgSize Size of the original photos
-	 */
-	Status stitch( std::vector<cv::Mat> &input,
-				 cv::Mat  &result,
-				 cv::Mat  &result_mask)
-		{ std::vector<cv::Mat> vec; return stitch( input, vec, result, result_mask); }
-
-	/**
-	 * @brief stitch
-	 * @param input       preloaded images who are about to get stitched
-	 * @param input_masks Additional masks for input
-	 * @param result      name of the file the result should be saved to. Don't add extensions
+	 * @param input       Preloaded images who are about to get stitched
+	 * @param input_masks Additional masks for input (pass an empty vector if none available)
+	 * @param result      reference where the result should be stored to
+	 * @param result_mask reference where the resulting mask should be stored to
 	 * @param imgSize     Size of the original/non-stitched photos
+	 * @param cameras     Initial camera parameters (pass an empty vector if none available)
 	 */
 	Status stitch( std::vector<cv::Mat> &input,
-				 std::vector<cv::Mat> &input_masks,
-				 cv::Mat &result,
-				 cv::Mat &result_mask);
+				   std::vector<cv::Mat> &input_masks,
+				   cv::Mat &result,
+				   cv::Mat &result_mask,
+				   std::vector<cv::detail::CameraParams> &cameras);
 
 protected:
 	/***************************
@@ -143,8 +135,8 @@ protected:
 
 	// Options:
 	//		Blender::NO, Blender::FEATHER, Blender::MULTI_BAND
-	int   blend_type_ = cv::detail::Blender::MULTI_BAND;
-	float blend_strength_ = 5;
+	int   blend_type_;
+	float blend_strength_;
 
 
 	/*************************************

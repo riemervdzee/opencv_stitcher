@@ -28,9 +28,10 @@ Stitcher::Stitcher()
 }
 
 Status Stitcher::stitch( std::vector<cv::Mat> &input,
-					   std::vector<cv::Mat> &input_masks,
-					   cv::Mat  &result,
-					   cv::Mat  &result_mask)
+						 std::vector<cv::Mat> &input_masks,
+						 cv::Mat &result,
+						 cv::Mat &result_mask,
+						 std::vector<cv::detail::CameraParams> &cameras)
 {
 #ifdef DEBUG
 	cv::setBreakOnError(true);
@@ -98,24 +99,26 @@ Status Stitcher::stitch( std::vector<cv::Mat> &input,
 	t = getTickCount();
 #endif
 
+	if( cameras.empty())
+	{
+		// First attempt to get the images aligned to eachother
+		HomographyBasedEstimator estimator;
 
-	// First attempt to get the images aligned to eachother
-	HomographyBasedEstimator estimator;
-	vector<CameraParams> cameras;
-	estimator( features, pairwise_matches, cameras);
 
-	// Check if we failed (in OpenCV 3 we have better options to check this)
-	if( isnan( cameras[0].R.at<float>(0,0)))
-		return Status::ERR_HOMOGRAPHY_EST_FAIL;
+		estimator( features, pairwise_matches, cameras);
+
+		// Check if we failed (in OpenCV 3 we have better options to check this)
+		if( isnan( cameras[0].R.at<float>(0,0)))
+			return Status::ERR_HOMOGRAPHY_EST_FAIL;
 
 #ifdef DEBUG
-	for (size_t i = 0; i < cameras.size(); ++i)
-		cout << "Initial intrinsics #" << (i+1) << ":\n" << cameras[i].K() << endl;
+		for (size_t i = 0; i < cameras.size(); ++i)
+			cout << "Initial intrinsics #" << (i+1) << ":\n" << cameras[i].K() << endl;
 
-	cout << "Time: " << ((getTickCount() - t) / getTickFrequency()) << " sec,\t Homography Estimator" << endl;
-	t = getTickCount();
+		cout << "Time: " << ((getTickCount() - t) / getTickFrequency()) << " sec,\t Homography Estimator" << endl;
+		t = getTickCount();
 #endif
-
+	}
 
 	// Convert cameras to floats
 	for (size_t i = 0; i < cameras.size(); ++i)
@@ -147,7 +150,7 @@ Status Stitcher::stitch( std::vector<cv::Mat> &input,
 
 #ifdef DEBUG
 	for (size_t i = 0; i < cameras.size(); ++i)
-		cout << "Camera #" << i+1 << ":\n" << cameras[i].K() << endl;
+		cout << "Camera #" << i+1 << ":\n" << cameras[i].K() << "\n" << cameras[i].R << endl;
 
 	cout << "Time: " << ((getTickCount() - t) / getTickFrequency()) << " sec,\t Adjustor" << endl;
 	t = getTickCount();
