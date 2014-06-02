@@ -5,6 +5,7 @@
 #include "opencv2/stitching/warpers.hpp"
 
 #define DEBUG
+//#define DEBUG_CAMERA
 
 using namespace std;
 using namespace cv;
@@ -104,17 +105,17 @@ Status Stitcher::stitch( std::vector<cv::Mat> &input,
 		// First attempt to get the images aligned to eachother
 		HomographyBasedEstimator estimator;
 
-
 		estimator( features, pairwise_matches, cameras);
 
 		// Check if we failed (in OpenCV 3 we have better options to check this)
 		if( isnan( cameras[0].R.at<float>(0,0)))
 			return Status::ERR_HOMOGRAPHY_EST_FAIL;
 
-#ifdef DEBUG
+#ifdef DEBUG_CAMERA
 		for (size_t i = 0; i < cameras.size(); ++i)
-			cout << "Initial intrinsics #" << (i+1) << ":\n" << cameras[i].K() << endl;
-
+			cout << "Camera #" << i+1 << ":\n" << cameras[i].K() << "\n" << cameras[i].R << endl;
+#endif
+#ifdef DEBUG
 		cout << "Time: " << ((getTickCount() - t) / getTickFrequency()) << " sec,\t Homography Estimator" << endl;
 		t = getTickCount();
 #endif
@@ -148,10 +149,11 @@ Status Stitcher::stitch( std::vector<cv::Mat> &input,
 	features.clear();
 	pairwise_matches.clear();
 
-#ifdef DEBUG
+#ifdef DEBUG_CAMERA
 	for (size_t i = 0; i < cameras.size(); ++i)
 		cout << "Camera #" << i+1 << ":\n" << cameras[i].K() << "\n" << cameras[i].R << endl;
-
+#endif
+#ifdef DEBUG
 	cout << "Time: " << ((getTickCount() - t) / getTickFrequency()) << " sec,\t Adjustor" << endl;
 	t = getTickCount();
 #endif
