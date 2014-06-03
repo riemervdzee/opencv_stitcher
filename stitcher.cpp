@@ -66,7 +66,7 @@ Status Stitcher::stitch( std::vector<cv::Mat> &input,
 	if( comp_res_ != Stitcher::ORIGINAL_RES)
 		comp_factor = sqrt( comp_res_ / img_res_);
 
-	// Loop through all images, resize to find features. Then resize to be used for seaming
+	// Loop through all images, resize to find features.
 	for (size_t i = 0; i < input.size(); ++i)
 	{
 		Mat temp;
@@ -88,6 +88,7 @@ Status Stitcher::stitch( std::vector<cv::Mat> &input,
 	t = getTickCount();
 #endif
 
+
 	// Now we match the features according the featurematching-mask
 	vector<MatchesInfo> pairwise_matches;
 	BestOf2NearestMatcher matcher( false, conf_featurematching_);
@@ -96,9 +97,16 @@ Status Stitcher::stitch( std::vector<cv::Mat> &input,
 	matcher.collectGarbage();
 
 #ifdef DEBUG
+	for(unsigned int i = 0; i < pairwise_matches.size(); ++i) {
+		if( pairwise_matches[i].matches.size() == 0)
+			continue;
+		cout << "Matched " << pairwise_matches[i].src_img_idx << " with " << pairwise_matches[i].dst_img_idx << ", results: " << pairwise_matches[i].matches.size() << endl;
+	}
+
 	cout << "Time: " << ((getTickCount() - t) / getTickFrequency()) << " sec,\t Pairwise matching" << endl;
 	t = getTickCount();
 #endif
+
 
 	if( cameras.empty())
 	{
@@ -120,6 +128,7 @@ Status Stitcher::stitch( std::vector<cv::Mat> &input,
 		t = getTickCount();
 #endif
 	}
+
 
 	// Convert cameras to floats
 	for (size_t i = 0; i < cameras.size(); ++i)
