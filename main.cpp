@@ -19,25 +19,25 @@ static vector<string> img_names = {
 	"dataset2/img01",
 //	"dataset2/img02",
 //	"dataset2/img03",
-	"dataset2/img04",
-//	"dataset2/img05",
+//	"dataset2/img04",
+	"dataset2/img05",
 //	"dataset2/img06",
-	"dataset2/img07",
+//	"dataset2/img07",
 //	"dataset2/img08",
-//	"dataset2/img09",
-	"dataset2/img10",
+	"dataset2/img09",
+//	"dataset2/img10",
 //	"dataset2/img11",
 //	"dataset2/img12",
 	"dataset2/img13",
 //	"dataset2/img14",
 //	"dataset2/img15",
-	"dataset2/img16",
-//	"dataset2/img17",
+//	"dataset2/img16",
+	"dataset2/img17",
 //	"dataset2/img18",
-	"dataset2/img19",
+//	"dataset2/img19",
 //	"dataset2/img20",
-//	"dataset2/img21",
-	"dataset2/img22",
+	"dataset2/img21",
+//	"dataset2/img22",
 //	"dataset2/img23",
 //	"dataset2/img24",
 	"dataset2/img25",
@@ -52,7 +52,7 @@ static Mat intrinsic = getDefaultNewCameraMatrix( Mat::eye( 3, 3, CV_64F), img_s
 
 // Distruption coeffecients
 static float Coeffs[] = {-0.00000019f, 0.f, 0.f, 0.f};
-static Mat distCoeffs = Mat( 4, 1, CV_32F, Coeffs);
+static Matx14f distCoeffs ( Coeffs);
 
 
 // Program options, to be set via cli arg?
@@ -88,7 +88,7 @@ int main(int argc, char* argv[])
 		images.push_back( temp);
 
 #if 0
-		// Output remapped images to files
+		// Output remapped images to hdd
 		int zeros = 0;
 		if( i < 10) zeros = 1;
 		string file = "temp/" + result_name + std::string( zeros, '0') + std::to_string( i ) + ".jpg";
@@ -118,11 +118,10 @@ int main(int argc, char* argv[])
 	// Stitch
 	Mat result, result_mask;
 	Stitcher stitcher;
-	stitcher.set_matching_mask (matchMask);
 	stitcher.set_img_res       (img_size.area());
-	stitcher.set_feat_res      (0.8 * 1e6);
+	stitcher.set_feat_res      (1.5 * 1e6);
 	stitcher.set_seam_res      (0.1 * 1e6);
-	stitcher.set_feature_finder( Ptr<FeaturesFinder>( new OrbFeaturesFinder( Size(1,1), 3500)));
+	stitcher.set_feature_finder( Ptr<FeaturesFinder>( new OrbFeaturesFinder( Size(3,1), 10000)));
 	/*stitcher.set_comp_res      (1.0 * 1e6);*/
 	stitcher.set_conf_adjustor (0.95f);
 	stitcher.set_conf_featurematching( 0.35f);
@@ -130,7 +129,7 @@ int main(int argc, char* argv[])
 	// Cameras (TODO fill?)
 	vector <CameraParams>cameras;
 
-	Status ret = stitcher.stitch( images, images_masks, result, result_mask, cameras);
+	Status ret = stitcher.stitch( images, images_masks, result, result_mask, matchMask, cameras);
 	if( ret == Status::OK)
 	{
 		// Save

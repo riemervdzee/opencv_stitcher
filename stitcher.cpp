@@ -33,7 +33,6 @@ Status Stitcher::stitch( std::vector<cv::Mat> &input,
 						 cv::Mat &result,
 						 cv::Mat &result_mask,
 						 cv::Mat &matching_mask,
-						 std::vector<std::vector<cv::Rect>> &matching_roi,
 						 std::vector<cv::detail::CameraParams> &cameras)
 {
 #ifdef DEBUG
