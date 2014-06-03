@@ -53,6 +53,13 @@ public:
 	cv::Ptr<cv::detail::FeaturesFinder> feature_finder() const { return feature_finder_;}
 	void set_feature_finder( cv::Ptr<cv::detail::FeaturesFinder> feature_finder){ feature_finder_ = feature_finder; }
 
+	const cv::Mat& matching_mask() const { return matching_mask_; }
+	void set_matching_mask(const cv::Mat &mask)
+	{
+		CV_Assert(mask.type() == CV_8U && mask.cols == mask.rows);
+		matching_mask_ = mask.clone();
+	}
+
 	float conf_featurematching() const { return conf_featurematching_; }
 	void set_conf_featurematching(float conf_featurematching) { conf_featurematching_ = conf_featurematching; }
 
@@ -91,8 +98,6 @@ public:
 				   std::vector<cv::Mat> &input_masks,
 				   cv::Mat &result,
 				   cv::Mat &result_mask,
-				   cv::Mat &matching_mask,
-				   std::vector<std::vector<cv::Rect>> &matching_roi,
 				   std::vector<cv::detail::CameraParams> &cameras);
 
 protected:
@@ -107,6 +112,9 @@ protected:
 
 	// Options: SurfFeaturesFinder or OrbFeaturesFinder
 	cv::Ptr<cv::detail::FeaturesFinder> feature_finder_;
+
+	// Matrix who tells which image to compare to which
+	cv::Mat matching_mask_;
 
 	// Confidences
 	float conf_featurematching_;

@@ -32,8 +32,6 @@ Status Stitcher::stitch( std::vector<cv::Mat> &input,
 						 std::vector<cv::Mat> &input_masks,
 						 cv::Mat &result,
 						 cv::Mat &result_mask,
-						 cv::Mat &matching_mask,
-						 std::vector<std::vector<cv::Rect>> &matching_roi,
 						 std::vector<cv::detail::CameraParams> &cameras)
 {
 #ifdef DEBUG
@@ -52,7 +50,6 @@ Status Stitcher::stitch( std::vector<cv::Mat> &input,
 		cerr << "input.size() = " << input.size() << ", input_masks.size() = " << input_masks.size() << endl;
 		return Status::ERR_NEED_MORE_IMGS;
 	}
-
 
 	vector<Mat> images = input;
 	vector<ImageFeatures> features( images.size());
@@ -90,11 +87,12 @@ Status Stitcher::stitch( std::vector<cv::Mat> &input,
 	t = getTickCount();
 #endif
 
+
 	// Now we match the features according the featurematching-mask
 	vector<MatchesInfo> pairwise_matches;
 	BestOf2NearestMatcher matcher( false, conf_featurematching_);
 
-	matcher( features, pairwise_matches, matching_mask);
+	matcher( features, pairwise_matches, matching_mask_);
 	matcher.collectGarbage();
 
 #ifdef DEBUG
