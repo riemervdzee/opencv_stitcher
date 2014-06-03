@@ -53,36 +53,35 @@ Status Stitcher::stitch( std::vector<cv::Mat> &input,
 	}
 
 
-	vector<Mat> images = input;
-	vector<ImageFeatures> features( images.size());
-	vector<Size> full_img_sizes(images.size());
-	Mat temp;
+	vector<ImageFeatures> features( input.size());
+	vector<Size> full_img_sizes( input.size());
 
-	// Get the factors from img->feat, feat->seam and img->compositioning
-	double feat_factor = sqrt( feat_res_ /  img_res_);
-	double seam_factor = sqrt( seam_res_ / feat_res_);
+
+	// Get the factors from input-img->feat, img->seam, feat->seam and img->composition
+	double factor_img_feat  = sqrt( feat_res_ /  img_res_);
+	double factor_img_seam  = sqrt( seam_res_ /  img_res_);
+	double factor_feat_seam = sqrt( seam_res_ / feat_res_);
 	double comp_factor = 1;
 
 	if( comp_res_ != Stitcher::ORIGINAL_RES)
 		comp_factor = sqrt( comp_res_ / img_res_);
 
 	// Loop through all images, resize to find features. Then resize to be used for seaming
-	for (size_t i = 0; i < images.size(); ++i)
+	for (size_t i = 0; i < input.size(); ++i)
 	{
-		full_img_sizes[i] = images[i].size();
-		resize( images[i], temp, Size(), feat_factor, feat_factor);
+		Mat temp;
+
+		full_img_sizes[i] = input[i].size();
+		resize( input[i], temp, Size(), factor_img_feat, factor_img_feat);
 
 		feature_finder_->operator()( temp, features[i]);
 		features[i].img_idx = i;
-
-		resize( temp, images[i], Size(), seam_factor, seam_factor);
 	}
 
 	feature_finder_->collectGarbage();
-	temp.release();
 
 #ifdef DEBUG
-	for (size_t i = 0; i < images.size(); ++i)
+	for (size_t i = 0; i < input.size(); ++i)
 		cout << "\tImage #" << (i+1) << ": " << features[i].keypoints.size() << endl;
 
 	cout << "Time: " << ((getTickCount() - t) / getTickFrequency()) << " sec,\t finding features" << endl;
@@ -180,31 +179,31 @@ Status Stitcher::stitch( std::vector<cv::Mat> &input,
 
 	// Warp images and their masks to the adjuster found cameras
 	Ptr<WarperCreator>  warper_creator = new cv::PlaneWarper();
-	Ptr<RotationWarper> warper         = warper_creator->create( warped_image_scale * seam_factor);
+	Ptr<RotationWarper> warper         = warper_creator->create( warped_image_scale * factor_feat_seam);
 
 	for (size_t i = 0; i < input.size(); ++i)
 	{
-		Mat mask;
+		Mat mask, temp;
+		resize( input[i], temp, Size(), factor_img_seam, factor_img_seam);
+
 		if( input_masks.size() == 0) {
-			mask.create( images[i].size(), CV_8U);
+			mask.create( temp.size(), CV_8U);
 			mask.setTo( Scalar::all(255));
 		}
 		else
-			resize( input_masks[i], mask, images[i].size());
+			resize( input_masks[i], mask, temp.size());
 
 		Mat_<float> K;
 		cameras[i].K().convertTo(K, CV_32F);
-		float swa = seam_factor;
+		float swa = factor_feat_seam;
 		K(0,0) *= swa; K(0,2) *= swa;
 		K(1,1) *= swa; K(1,2) *= swa;
 
-		corners[i] = warper->warp(images[i], K, cameras[i].R, INTER_LINEAR, BORDER_REFLECT, images_warped[i]);
+		corners[i] = warper->warp(temp, K, cameras[i].R, INTER_LINEAR, BORDER_REFLECT, images_warped[i]);
 		sizes  [i] = images_warped[i].size();
 
 		warper->warp(mask, K, cameras[i].R, INTER_NEAREST, BORDER_CONSTANT, masks_warped[i]);
 	}
-
-	images.clear();
 
 	// Feed the images to the gain exposure compensator
 	Ptr<ExposureCompensator> compensator = ExposureCompensator::createDefault(exposure_type_);
@@ -234,7 +233,7 @@ Status Stitcher::stitch( std::vector<cv::Mat> &input,
 
 
 	// Compute relative scales and update them
-	double compose_work_aspect = comp_factor/feat_factor;
+	double compose_work_aspect = comp_factor/factor_img_feat;
 	warped_image_scale        *= compose_work_aspect;
 	warper                     = warper_creator->create( warped_image_scale);
 
@@ -287,7 +286,7 @@ Status Stitcher::stitch( std::vector<cv::Mat> &input,
 	// Add all images to the blender with fully warped img/masks and found cornerns
 	for (size_t i = 0; i < input.size(); ++i)
 	{
-		Mat K;
+		Mat K, temp;
 		cameras[i].K().convertTo(K, CV_32F);
 
 		// Additional resize
