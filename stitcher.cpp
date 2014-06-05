@@ -352,11 +352,42 @@ Status Stitcher::stitch( std::vector<cv::Mat> &input,
 		// Blend the current image
 		blender->feed(img_warped_s, mask_warped, corners[i]);
 	}
+
+	// Save whether we have masks as input
+	bool have_masks = (input_masks.size() != 0);
+
+	// Clear input and blend
 	input.clear();
 	input_masks.clear();
+	blender->blend( result, result_mask);
 
-	//Mat result, result_mask;
-	blender->blend(result, result_mask);
+
+	// If we have input_masks, there is a chance the end result has too large black areas
+	if( have_masks)
+	{
+		Mat mask_copy = result_mask;
+		vector<vector<Point>> v;
+
+		// Find contours
+		findContours( mask_copy, v, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_SIMPLE );
+		mask_copy.release();
+
+		// Get the one with the largest area
+		unsigned int area = 0;
+		unsigned int id;
+		for(unsigned int i = 0; i < v.size(); ++i) {
+			if( area < v[i].size()) {
+				area = v[i].size();
+				id = i;
+			}
+		}
+
+		// Get bounding rect, then ROI
+		Rect rect   = boundingRect( v[id]);
+		rect        = Rect( rect.x -1, rect.y -1, rect.width + 2, rect.height + 2);
+		result      = result      ( rect);
+		result_mask = result_mask ( rect);
+	}
 
 #ifdef DEBUG
 	cout << "Time: " << ((getTickCount() - t) / getTickFrequency()) << " sec,\t Compositing" << endl;
