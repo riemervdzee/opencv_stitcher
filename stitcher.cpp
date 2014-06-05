@@ -67,6 +67,14 @@ Status Stitcher::stitch( std::vector<cv::Mat> &input,
 	if( comp_res_ != Stitcher::ORIGINAL_RES)
 		comp_factor = sqrt( comp_res_ / img_res_);
 
+	// Update all ROIs to the img->feat resolution
+	for( size_t i = 0; i < input_roi.size(); ++i) {
+		for( size_t j = 0; j < input_roi[i].size(); ++j) {
+			Rect roi = input_roi[i][j];
+			input_roi[i][j] = Rect( roi.x     * factor_img_feat, roi.y      * factor_img_feat,
+									roi.width * factor_img_feat, roi.height * factor_img_feat);
+		}
+	}
 
 	// Loop through all images, resize to find features.
 	vector<ImageFeatures> features( input.size());
