@@ -91,8 +91,9 @@ public:
 				   std::vector<cv::Mat> &input_masks,
 				   cv::Mat &result,
 				   cv::Mat &result_mask,
-				   cv::Mat &matching_mask,
-				   std::vector<cv::detail::CameraParams> &cameras);
+				   const cv::Mat &matching_mask,
+				   std::vector<std::vector<cv::Rect>> input_roi  = std::vector<std::vector<cv::Rect>>(),
+				   std::vector<cv::detail::CameraParams> cameras = std::vector<cv::detail::CameraParams>());
 
 protected:
 	/***************************

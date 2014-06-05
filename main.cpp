@@ -126,10 +126,7 @@ int main(int argc, char* argv[])
 	stitcher.set_conf_adjustor (0.95f);
 	stitcher.set_conf_featurematching( 0.35f);
 
-	// Cameras (TODO fill?)
-	vector <CameraParams>cameras;
-
-	Status ret = stitcher.stitch( images, images_masks, result, result_mask, matchMask, cameras);
+	Status ret = stitcher.stitch( images, images_masks, result, result_mask, matchMask);
 	if( ret == Status::OK)
 	{
 		// Save

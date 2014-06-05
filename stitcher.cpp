@@ -1,3 +1,8 @@
+/*
+ * TODO:
+ * - Remove features from mask area, not required so far
+ */
+
 #include "stitcher.h"
 
 #include <iostream>
@@ -32,8 +37,9 @@ Status Stitcher::stitch( std::vector<cv::Mat> &input,
 						 std::vector<cv::Mat> &input_masks,
 						 cv::Mat &result,
 						 cv::Mat &result_mask,
-						 cv::Mat &matching_mask,
-						 std::vector<cv::detail::CameraParams> &cameras)
+						 const cv::Mat &matching_mask,
+						 std::vector<std::vector<cv::Rect>> input_roi,
+						 std::vector<cv::detail::CameraParams> cameras)
 {
 #ifdef DEBUG
 	cv::setBreakOnError(true);
@@ -52,11 +58,6 @@ Status Stitcher::stitch( std::vector<cv::Mat> &input,
 		return Status::ERR_NEED_MORE_IMGS;
 	}
 
-
-	vector<ImageFeatures> features( input.size());
-	vector<Size> full_img_sizes( input.size());
-
-
 	// Get the factors from input-img->feat, img->seam, feat->seam and img->composition
 	double factor_img_feat  = sqrt( feat_res_ /  img_res_);
 	double factor_img_seam  = sqrt( seam_res_ /  img_res_);
@@ -66,18 +67,24 @@ Status Stitcher::stitch( std::vector<cv::Mat> &input,
 	if( comp_res_ != Stitcher::ORIGINAL_RES)
 		comp_factor = sqrt( comp_res_ / img_res_);
 
+
 	// Loop through all images, resize to find features.
+	vector<ImageFeatures> features( input.size());
+	vector<Size> full_img_sizes( input.size());
+
 	for (size_t i = 0; i < input.size(); ++i)
 	{
 		Mat temp;
-
-		full_img_sizes[i] = input[i].size();
 		resize( input[i], temp, Size(), factor_img_feat, factor_img_feat);
 
-		feature_finder_->operator()( temp, features[i]);
-		features[i].img_idx = i;
-	}
+		if( input_roi.size() != 0 && input_roi[i].size() != 0)
+			feature_finder_->operator()( temp, features[i], input_roi[i]);
+		else
+			feature_finder_->operator()( temp, features[i]);
 
+		features[i].img_idx = i;
+		full_img_sizes[i]   = input[i].size();
+	}
 	feature_finder_->collectGarbage();
 
 #ifdef DEBUG
@@ -315,8 +322,10 @@ Status Stitcher::stitch( std::vector<cv::Mat> &input,
 			mask.create( temp.size(), CV_8U);
 			mask.setTo( Scalar::all(255));
 		}
-		else
+		else {
 			resize( input_masks[i], mask, temp.size());
+			input_masks[i].release();
+		}
 
 		warper->warp(mask, K, cameras[i].R, INTER_NEAREST, BORDER_CONSTANT, mask_warped);
 
@@ -335,7 +344,6 @@ Status Stitcher::stitch( std::vector<cv::Mat> &input,
 		// Blend the current image
 		blender->feed(img_warped_s, mask_warped, corners[i]);
 	}
-
 	input.clear();
 	input_masks.clear();
 
