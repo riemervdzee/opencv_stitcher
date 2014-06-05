@@ -226,7 +226,7 @@ Status Stitcher::stitch( std::vector<cv::Mat> &input,
 		corners[i] = warper->warp(temp, K, cameras[i].R, INTER_LINEAR, BORDER_REFLECT, images_warped[i]);
 		sizes  [i] = images_warped[i].size();
 
-		warper->warp(mask, K, cameras[i].R, INTER_NEAREST, BORDER_CONSTANT, masks_warped[i]);
+		warper->warp(mask, K, cameras[i].R, INTER_LINEAR, BORDER_CONSTANT, masks_warped[i]);
 	}
 
 	// Feed the images to the gain exposure compensator
@@ -335,7 +335,7 @@ Status Stitcher::stitch( std::vector<cv::Mat> &input,
 			input_masks[i].release();
 		}
 
-		warper->warp(mask, K, cameras[i].R, INTER_NEAREST, BORDER_CONSTANT, mask_warped);
+		warper->warp(mask, K, cameras[i].R, INTER_LINEAR, BORDER_CONSTANT, mask_warped);
 
 		// Compensate exposure
 		compensator->apply(i, corners[i], img_warped, mask_warped);
@@ -365,7 +365,7 @@ Status Stitcher::stitch( std::vector<cv::Mat> &input,
 	// If we have input_masks, there is a chance the end result has too large black areas
 	if( have_masks)
 	{
-		Mat mask_copy = result_mask;
+		Mat mask_copy = result_mask.clone();
 		vector<vector<Point>> v;
 
 		// Find contours
