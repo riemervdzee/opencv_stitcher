@@ -79,13 +79,17 @@ public:
 
 
 	/**
-	 * @brief stitch
-	 * @param input       Preloaded images who are about to get stitched
-	 * @param input_masks Additional masks for input (pass an empty vector if none available)
-	 * @param result      reference where the result should be stored to
-	 * @param result_mask reference where the resulting mask should be stored to
-	 * @param imgSize     Size of the original/non-stitched photos
-	 * @param cameras     Initial camera parameters (pass an empty vector if none available)
+	 * @brief stitch         Main function of the stitcher. Is able to stitch multiple images and restitch results.
+	 *
+	 * @param input          Preloaded images who are about to get stitched
+	 * @param input_masks    Additional masks for input (pass an empty vector if none available)
+	 * @param result         Reference where the result should be stored to
+	 * @param result_mask    Reference where the resulting mask should be stored to
+	 * @param matching_mask  Tells which image-index to match with which
+	 * @param input_roi      Every image can have a ROI where features are attempted to be found
+	 * @param cameras        Initial camera setup (no function atm)
+	 *
+	 * @return               Returns whether the stitcher is succesful or not
 	 */
 	Status stitch( std::vector<cv::Mat> &input,
 				   std::vector<cv::Mat> &input_masks,
@@ -117,7 +121,7 @@ protected:
 	std::string                            adjuster_mask_;
 
 	// Exposure type
-	int exposure_type_ = cv::detail::ExposureCompensator::GAIN;
+	int exposure_type_;
 
 	// Seamfinder algorithm. Options:
 	//		NoSeamFinder, VoronoiSeamFinder, GraphCutSeamFinder(GraphCutSeamFinderBase::COST_COLOR),
@@ -138,11 +142,6 @@ protected:
 	std::vector<cv::Mat> input_masks_;
 	std::string          result_name_;
 	cv::Size             img_size_;
-
-
-	/*************************************
-	 * Direct inputs by stitch functions *
-	 *************************************/
 };
 
 #endif // STITCHER_H
