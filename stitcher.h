@@ -59,8 +59,8 @@ public:
 	float conf_adjustor() const { return conf_adjustor_; }
 	void set_conf_adjustor(float conf_adjustor) { conf_adjustor_ = conf_adjustor; }
 
-	cv::Ptr<cv::detail::BundleAdjusterRay> adjuster() const { return adjuster_; }
-	void set_adjuster( cv::Ptr<cv::detail::BundleAdjusterRay> adjuster) { adjuster_ = adjuster; }
+	cv::Ptr<cv::detail::BundleAdjusterBase> adjuster() const { return adjuster_; }
+	void set_adjuster( cv::Ptr<cv::detail::BundleAdjusterBase> adjuster) { adjuster_ = adjuster; }
 
 	std::string adjuster_mask() const { return adjuster_mask_; }
 	void set_adjuster_mask( std::string adjuster_mask) { adjuster_mask_ = adjuster_mask; }
@@ -117,8 +117,8 @@ protected:
 	float conf_adjustor_;
 
 	// options: BundleAdjusterReproj, BundleAdjusterRay
-	cv::Ptr<cv::detail::BundleAdjusterRay> adjuster_;
-	std::string                            adjuster_mask_;
+	cv::Ptr<cv::detail::BundleAdjusterBase> adjuster_;
+	std::string                             adjuster_mask_;
 
 	// Exposure type
 	int exposure_type_;
