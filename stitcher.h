@@ -68,8 +68,8 @@ public:
 	int exposure_type() const { return exposure_type_; }
 	void set_exposure_type( int exposure_type) { exposure_type_ = exposure_type; }
 
-	cv::Ptr<cv::detail::GraphCutSeamFinder> seam_finder() const { return seam_finder_; }
-	void set_seam_finder( cv::Ptr<cv::detail::GraphCutSeamFinder> seam_finder) { seam_finder_ = seam_finder; }
+	cv::Ptr<cv::detail::SeamFinder> seam_finder() const { return seam_finder_; }
+	void set_seam_finder( cv::Ptr<cv::detail::SeamFinder> seam_finder) { seam_finder_ = seam_finder; }
 
 	int blend_type() const { return blend_type_; }
 	void set_blend_type( int blend_type){ blend_type_ = blend_type; }
@@ -127,7 +127,7 @@ protected:
 	//		NoSeamFinder, VoronoiSeamFinder, GraphCutSeamFinder(GraphCutSeamFinderBase::COST_COLOR),
 	//		GraphCutSeamFinder, (GraphCutSeamFinderBase::COST_COLOR_GRAD), DpSeamFinder(DpSeamFinder::COLOR),
 	//		DpSeamFinder(DpSeamFinder::COLOR_GRAD)
-	cv::Ptr<cv::detail::GraphCutSeamFinder> seam_finder_;
+	cv::Ptr<cv::detail::SeamFinder> seam_finder_;
 
 	// Options:
 	//		Blender::NO, Blender::FEATHER, Blender::MULTI_BAND
