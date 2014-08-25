@@ -64,7 +64,6 @@ static bool arg_have_masks = false;
 
 int main(int argc, char* argv[])
 {
-	Mat map1, map2;
 	vector<Mat> images, images_masks;
 	images.reserve( 10); // TODO calculate 10
 
@@ -82,14 +81,6 @@ int main(int argc, char* argv[])
 
 		images.push_back( temp);
 
-#if 0
-		// Output remapped images to hdd
-		int zeros = 0;
-		if( i < 10) zeros = 1;
-		string file = "temp/" + result_name + std::string( zeros, '0') + std::to_string( i ) + ".jpg";
-		imwrite(file, images[i]);
-#endif
-
 		if(arg_have_masks) {
 			temp = imread(img_names[i] + "_mask.jpg", CV_8U);
 
@@ -100,9 +91,7 @@ int main(int argc, char* argv[])
 
 			images_masks.push_back( temp);
 		}
-	}
-	map1.release();
-	map2.release();*/
+	}*/
 
 	camera.open( input);
 	camera.set ( CV_CAP_PROP_POS_MSEC, start);
@@ -118,21 +107,9 @@ int main(int argc, char* argv[])
 
 		for( int j = 0; j < 26; j++)
 			camera.grab();
-
-#if 1
-		// Output remapped images to hdd
-		int zeros = 0;
-		if( i < 1000) zeros = 1;
-		if( i <  100) zeros = 2;
-		if( i <   10) zeros = 3;
-		string file = "temp/" + result_name + std::string( zeros, '0') + std::to_string( i ) + ".jpg";
-		imwrite(file, images[i]);
-#endif
 	}
 
 	camera.release();
-	map1.release();
-	map2.release();
 	cout << "Time: " << ((getTickCount() - t) / getTickFrequency()) << "\tsec, Video Read" << endl;
 
 
