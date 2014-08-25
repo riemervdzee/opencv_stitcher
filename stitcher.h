@@ -89,7 +89,7 @@ public:
 	 * @param input_roi      Every image can have a ROI where features are attempted to be found
 	 * @param cameras        Initial camera setup (no function atm)
 	 *
-	 * @return               Returns whether the stitcher is succesful or not
+	 * @return               Returns whether the stitcher was succesful or not
 	 */
 	Status stitch( std::vector<cv::Mat> &input,
 				   std::vector<cv::Mat> &input_masks,

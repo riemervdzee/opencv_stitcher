@@ -9,8 +9,8 @@
 
 #include "opencv2/stitching/warpers.hpp"
 
-#define DEBUG
-//#define DEBUG_CAMERA
+#define DEBUG         1
+#define DEBUG_CAMERA  0
 
 using namespace std;
 using namespace cv;
@@ -41,7 +41,7 @@ Status Stitcher::stitch( std::vector<cv::Mat> &input,
 						 std::vector<std::vector<cv::Rect>> input_roi,
 						 std::vector<cv::detail::CameraParams> cameras)
 {
-#ifdef DEBUG
+#if DEBUG
 	cv::setBreakOnError(true);
 
 	cout << "Finding features:" << endl;
@@ -95,7 +95,7 @@ Status Stitcher::stitch( std::vector<cv::Mat> &input,
 	}
 	feature_finder_->collectGarbage();
 
-#ifdef DEBUG
+#if DEBUG
 	for (size_t i = 0; i < input.size(); ++i)
 		cout << "\tImage #" << (i+1) << ": " << features[i].keypoints.size() << endl;
 
@@ -111,7 +111,7 @@ Status Stitcher::stitch( std::vector<cv::Mat> &input,
 	matcher( features, pairwise_matches, matching_mask);
 	matcher.collectGarbage();
 
-#ifdef DEBUG
+#if DEBUG
 	for(unsigned int i = 0; i < pairwise_matches.size(); ++i) {
 		if( pairwise_matches[i].matches.size() == 0)
 			continue;
@@ -134,11 +134,11 @@ Status Stitcher::stitch( std::vector<cv::Mat> &input,
 		if( isnan( cameras[0].R.at<float>(0,0)))
 			return Status::ERR_HOMOGRAPHY_EST_FAIL;
 
-#ifdef DEBUG_CAMERA
+#if DEBUG_CAMERA
 		for (size_t i = 0; i < cameras.size(); ++i)
 			cout << "Camera #" << i+1 << ":\n" << cameras[i].K() << "\n" << cameras[i].R << endl;
 #endif
-#ifdef DEBUG
+#if DEBUG
 		cout << "Time: " << ((getTickCount() - t) / getTickFrequency()) << " sec,\t Homography Estimator" << endl;
 		t = getTickCount();
 #endif
@@ -173,11 +173,11 @@ Status Stitcher::stitch( std::vector<cv::Mat> &input,
 	features.clear();
 	pairwise_matches.clear();
 
-#ifdef DEBUG_CAMERA
+#if DEBUG_CAMERA
 	for (size_t i = 0; i < cameras.size(); ++i)
 		cout << "Camera #" << i+1 << ":\n" << cameras[i].K() << "\n" << cameras[i].R << endl;
 #endif
-#ifdef DEBUG
+#if DEBUG
 	cout << "Time: " << ((getTickCount() - t) / getTickFrequency()) << " sec,\t Adjustor" << endl;
 	t = getTickCount();
 #endif
@@ -240,7 +240,7 @@ Status Stitcher::stitch( std::vector<cv::Mat> &input,
 
 	images_warped.clear();
 
-#ifdef DEBUG
+#if DEBUG
 	cout << "Time: " << ((getTickCount() - t) / getTickFrequency()) << " sec,\t warping images/masks, gain-feed" << endl;
 	t = getTickCount();
 #endif
@@ -250,7 +250,7 @@ Status Stitcher::stitch( std::vector<cv::Mat> &input,
 	seam_finder_->find( images_warped_f, corners, masks_warped);
 	images_warped_f.clear();
 
-#ifdef DEBUG
+#if DEBUG
 	cout << "Time: " << ((getTickCount() - t) / getTickFrequency()) << " sec,\t Seam finder" << endl;
 	t = getTickCount();
 #endif
@@ -389,7 +389,7 @@ Status Stitcher::stitch( std::vector<cv::Mat> &input,
 		result_mask = result_mask ( rect);
 	}
 
-#ifdef DEBUG
+#if DEBUG
 	cout << "Time: " << ((getTickCount() - t) / getTickFrequency()) << " sec,\t Compositing" << endl;
 	cout << "Finished! total time: " << ((getTickCount() - app_start_time) / getTickFrequency()) << " sec" << endl;
 #endif
