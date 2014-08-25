@@ -5,10 +5,12 @@
 #include <string>
 
 #include "opencv2/highgui/highgui.hpp"
+#include "opencv2/opencv.hpp"
 
 using namespace std;
 using namespace cv;
 using namespace cv::detail;
+
 
 // Optimizing
 ////https://software.intel.com/en-us/articles/fast-panorama-stitching
@@ -21,7 +23,7 @@ static long   end   = 92 * 1000;
 
 // Files
 /*static vector<string> img_names = {
-//	"dataset2/img01",
+	"dataset2/img01",
 //	"dataset2/img02",
 //	"dataset2/img03",
 //	"dataset2/img04",
@@ -54,13 +56,6 @@ static string result_name = "result";
 // Size of the input (non-stitched) images
 static Size img_size(1920, 1080);
 
-// Our camera object
-static Mat intrinsic = getDefaultNewCameraMatrix( Mat::eye( 3, 3, CV_64F), img_size, true);
-
-// Distruption coeffecients
-static float Coeffs[] = {-0.00000019f, 0.f, 0.f, 0.f};
-static Matx14f distCoeffs ( Coeffs);
-
 
 // Program options, to be set via cli arg?
 static bool arg_remap      = true;
@@ -76,21 +71,14 @@ int main(int argc, char* argv[])
 	if(arg_have_masks)
 		images_masks.reserve( 10);
 
-	// Calculate distortion maps
-	if(arg_remap)
-		initUndistortRectifyMap( intrinsic, distCoeffs, Mat(), Mat(), img_size, CV_32FC1, map1, map2);
-
 	// Load images and remap them
 	/*for (unsigned int i = 0; i < img_names.size(); ++i) {
-		temp = imread(img_names[i] + ".jpg");
+		Mat temp = imread(img_names[i] + ".jpg");
 
 		if (temp.empty()) {
 			cerr << "Can't open image " << img_names[i] << ".jpg" << endl;
 			return -1;
 		}
-
-		if(arg_remap)
-			remap( temp, temp, map1, map2, INTER_LINEAR );
 
 		images.push_back( temp);
 
@@ -113,7 +101,6 @@ int main(int argc, char* argv[])
 			images_masks.push_back( temp);
 		}
 	}
-	temp.release();
 	map1.release();
 	map2.release();*/
 
@@ -126,9 +113,6 @@ int main(int argc, char* argv[])
 		Mat temp;
 
 		camera.read( temp);
-
-		if(arg_remap)
-			remap( temp, temp, map1, map2, INTER_CUBIC );
 
 		images.push_back( temp);
 
@@ -163,7 +147,7 @@ int main(int argc, char* argv[])
 	stitcher.set_img_res       (img_size.area());
 	stitcher.set_feat_res      (1.0 * 1e6);
 	stitcher.set_seam_res      (0.1 * 1e6);
-	stitcher.set_feature_finder( Ptr<FeaturesFinder>( new OrbFeaturesFinder( Size(5,1), 3500)));
+	stitcher.set_feature_finder( Ptr<FeaturesFinder>( new OrbFeaturesFinder( Size(3,1), 3500)));
 	/*stitcher.set_comp_res      (1.0 * 1e6);*/
 	stitcher.set_conf_adjustor (0.95f);
 	stitcher.set_conf_featurematching( 0.5f);
