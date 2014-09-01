@@ -1,8 +1,9 @@
-#include "stitcher.h"
-
 #include <iostream>
 #include <fstream>
 #include <string>
+
+#include "stitcher.h"
+#include "adjusterhomography.h"
 
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/opencv.hpp"
@@ -58,7 +59,6 @@ static Size img_size(1920, 1080);
 
 
 // Program options, to be set via cli arg?
-static bool arg_remap      = true;
 static bool arg_have_masks = false;
 
 
@@ -125,7 +125,7 @@ int main(int argc, char* argv[])
 	stitcher.set_feat_res      (1.0 * 1e6);
 	stitcher.set_seam_res      (0.1 * 1e6);
 	stitcher.set_feature_finder( Ptr<FeaturesFinder>( new OrbFeaturesFinder( Size(3,1), 3500)));
-	/*stitcher.set_comp_res      (1.0 * 1e6);*/
+	stitcher.set_adjuster      ( Ptr<BundleAdjusterBase>( new AdjusterHomography()));
 	stitcher.set_conf_adjustor (0.95f);
 	stitcher.set_conf_featurematching( 0.5f);
 
